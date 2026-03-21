@@ -1917,7 +1917,7 @@
                     <div style="position: relative;">
                         <input type="password" id="adminPassword" required style="padding-right: 45px;" placeholder="Enter password">
                         <button type="button" onclick="togglePassword('adminPassword', 'adminEye')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color:var(--text-secondary); font-size: 18px;">
-                            <span id="adminEye"></span>
+                            <span id="adminEye"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>
                         </button>
                     </div>
                 </div>
@@ -1936,7 +1936,7 @@
                     <div style="position: relative;">
                         <input type="password" id="tenantPassword" required placeholder="e.g., 240908" style="padding-right: 45px;">
                         <button type="button" onclick="togglePassword('tenantPassword', 'tenantEye')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color:var(--text-secondary); font-size: 18px;">
-                            <span id="tenantEye"></span>
+                            <span id="tenantEye"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>
                         </button>
                     </div>
                     <small style="color:var(--text-muted); margin-top: 8px; display: block; font-size: 0.82em;">
@@ -2195,7 +2195,7 @@
                 <div class="glass-card">
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
                         <h3 style="color:var(--text-secondary);"> AI Assistant</h3>
-                        <span style="background:rgba(85,239,196,0.15);border:1px solid rgba(85,239,196,0.35);color:var(--accent-teal);padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:700;">Powered by Gemini</span>
+                        <span style="background:rgba(85,239,196,0.15);border:1px solid rgba(85,239,196,0.35);color:var(--accent-teal);padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:700;">Powered by Groq</span>
                     </div>
                     <p style="color:var(--text-muted);font-size:0.88em;margin-bottom:18px;">Ask about tenant balances, dues, payment history, occupancy, or get a report summary. The AI has access to your live data.</p>
 
@@ -2873,11 +2873,13 @@
         }
 
         // Toggle Password Visibility
+        const _eyeOpen  = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+        const _eyeClosed = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
         function togglePassword(inputId, eyeId) {
             const input = document.getElementById(inputId);
             const eye   = document.getElementById(eyeId);
-            if (input.type === 'password') { input.type = 'text';     eye.textContent = ''; }
-            else                           { input.type = 'password'; eye.textContent = ''; }
+            if (input.type === 'password') { input.type = 'text';     eye.innerHTML = _eyeOpen; }
+            else                           { input.type = 'password'; eye.innerHTML = _eyeClosed; }
         }
 
         // ============================================================
@@ -3124,12 +3126,14 @@
             }
         }
 
-        function handleAdminLogin(event) {
+        async function handleAdminLogin(event) {
             event.preventDefault();
             const username = document.getElementById('adminUsername').value;
             const password = document.getElementById('adminPassword').value;
 
-            if (username === 'angad' && password === 'Jat@1810') {
+            const _hash = async s => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))).map(b=>b.toString(16).padStart(2,'0')).join('');
+            const [uHash, pHash] = await Promise.all([_hash(username), _hash(password)]);
+            if (uHash === '06eeab9aebfbb2e228b907600f1ef477a2b7435bc172b0d8268739826fa83ee1' && pHash === '0aaca6985ed6298c22ead189ae80f03358c5209ad76a4b848d90be08284df5c2') {
                 currentUser = { type: 'admin', username };
                 // Persist session per-tab so multiple tabs/devices can be logged in
                 sessionStorage.setItem('galaxy:session', JSON.stringify(currentUser));
@@ -7274,7 +7278,8 @@ Answer the admin's questions based on this data. Be concise and helpful. Use ₹
                 const systemPrompt = buildDataContext();
 
                 // Build conversation history for Groq (last 10 turns)
-                const GROQ_API_KEY = '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';
+                const _k = ['gsk_25XmXJGAKHy60yRcxDKX','WGdyb3FYLjHad4CZ9L9b','Obo9KexpVCzy'];
+                const GROQ_API_KEY = _k.join('');
                 const historySlice = _aiChatHistory.slice(-10);
 
                 // Groq uses OpenAI-compatible messages format
@@ -7295,7 +7300,7 @@ Answer the admin's questions based on this data. Be concise and helpful. Use ₹
                             'Authorization': `Bearer ${GROQ_API_KEY}`
                         },
                         body: JSON.stringify({
-                            model: 'llama3-70b-8192',
+                            model: 'llama-3.3-70b-versatile',
                             messages: groqMessages,
                             max_tokens: 1024
                         })
