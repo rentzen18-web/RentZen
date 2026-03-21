@@ -2197,27 +2197,31 @@
                         <h3 style="color:var(--text-secondary);"> AI Assistant</h3>
                         <span style="background:rgba(85,239,196,0.15);border:1px solid rgba(85,239,196,0.35);color:var(--accent-teal);padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:700;">Powered by Groq</span>
                     </div>
-                    <p style="color:var(--text-muted);font-size:0.88em;margin-bottom:18px;">Ask about tenant balances, dues, payment history, occupancy, or get a report summary. The AI has access to your live data.</p>
+                    <p style="color:var(--text-muted);font-size:0.88em;margin-bottom:18px;">Full admin control via chat — bulk entries, payments, rent updates, late fees, room management, monthly resets &amp; more. The AI reads and writes your live data in real time.</p>
 
                     <div id="aiChatMessages" style="min-height:280px;max-height:420px;overflow-y:auto;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:14px;padding:16px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px;">
                         <div style="background:var(--bg-hover);border:1px solid rgba(79,172,254,0.2);border-radius:10px;padding:12px;align-self:flex-start;max-width:85%;">
                             <p style="color:var(--accent-blue);font-size:0.82em;font-weight:700;margin-bottom:4px;"> AI Assistant</p>
-                            <p style="color:var(--text-primary);font-size:0.92em;">Hello! I'm your RentZen AI assistant. I can help you with:<br>• Tenant balances and dues<br>• Payment history summaries<br>• Occupancy status<br>• Revenue reports<br>• General property management questions<br><br>What would you like to know?</p>
+                            <p style="color:var(--text-primary);font-size:0.92em;">Hello! I'm your RentZen AI — I can <strong>read and write</strong> all your data.<br><br><strong style="color:#a78bfa;">📋 What I can do:</strong><br>• Record &amp; approve payments<br>• Bulk entry for any month<br>• Update rent, electricity, pending, late fees<br>• Move tenants in/out, manage rooms<br>• Apply late fees, monthly reset<br>• Send WhatsApp reminders<br>• Revenue &amp; occupancy reports<br><br>Just type naturally — <em>"Mark Rahul paid ₹7000 via Cash"</em> or <em>"Bulk entry for March 2026 for all tenants"</em></p>
                         </div>
                     </div>
 
                     <div style="display:flex;gap:10px;">
-                        <input type="text" id="aiChatInput" placeholder="Ask about dues, payments, tenants..." onkeydown="if(event.key==='Enter')sendAIMessage()"
+                        <input type="text" id="aiChatInput" placeholder="Type anything: 'Bulk entry for March 2026', 'Mark Rahul paid ₹7000', 'Set electricity 650 for all', 'Apply late fees'..." onkeydown="if(event.key==='Enter')sendAIMessage()"
                             style="flex:1;padding:12px 16px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:10px;color:#fff;font-size:0.95em;outline:none;">
                         <button class="btn btn-primary" onclick="sendAIMessage()" id="aiSendBtn" style="white-space:nowrap;"> Send</button>
                     </div>
 
                     <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;">
-                        <span style="color:var(--text-muted);font-size:0.8em;align-self:center;">Quick ask:</span>
+                        <span style="color:var(--text-muted);font-size:0.8em;align-self:center;">Quick:</span>
                         <button onclick="quickAsk('Who has the highest pending dues?')" style="padding:5px 12px;background:var(--accent-purple-dim);border:1px solid rgba(124,92,255,0.2);border-radius:20px;color:#a78bfa;cursor:pointer;font-size:0.82em;">Highest dues</button>
-                        <button onclick="quickAsk('Give me a revenue summary')" style="padding:5px 12px;background:rgba(85,239,196,0.1);border:1px solid rgba(85,239,196,0.3);border-radius:20px;color:var(--accent-teal);cursor:pointer;font-size:0.82em;">Revenue summary</button>
-                        <button onclick="quickAsk('Which rooms are vacant?')" style="padding:5px 12px;background:var(--bg-hover);border:1px solid rgba(79,172,254,0.3);border-radius:20px;color:var(--accent-blue);cursor:pointer;font-size:0.82em;">Vacant rooms</button>
-                        <button onclick="quickAsk('Show payment status for all tenants')" style="padding:5px 12px;background:rgba(255,107,157,0.1);border:1px solid rgba(255,107,157,0.3);border-radius:20px;color:var(--accent-rose);cursor:pointer;font-size:0.82em;">All tenant status</button>
+                        <button onclick="quickAsk('Give me a full revenue summary')" style="padding:5px 12px;background:rgba(85,239,196,0.1);border:1px solid rgba(85,239,196,0.3);border-radius:20px;color:var(--accent-teal);cursor:pointer;font-size:0.82em;">Revenue summary</button>
+                        <button onclick="quickAsk('Who has not paid this month?')" style="padding:5px 12px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);border-radius:20px;color:var(--accent-rose);cursor:pointer;font-size:0.82em;">Unpaid tenants</button>
+                        <button onclick="quickAsk('Show all room and tenant status')" style="padding:5px 12px;background:var(--bg-hover);border:1px solid rgba(79,172,254,0.3);border-radius:20px;color:var(--accent-blue);cursor:pointer;font-size:0.82em;">All status</button>
+                        <button onclick="quickAsk('Set electricity bill to 700 for all tenants')" style="padding:5px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:20px;color:var(--accent-amber);cursor:pointer;font-size:0.82em;">⚡ Bulk electricity</button>
+                        <button onclick="quickAsk('Apply late fees of 100 to all overdue tenants')" style="padding:5px 12px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);border-radius:20px;color:var(--accent-rose);cursor:pointer;font-size:0.82em;">Apply late fees</button>
+                        <button onclick="quickAsk('Do a bulk entry for all tenants for ' + new Date().toLocaleString('default',{month:'long',year:'numeric'}) + ' — use their current rent and set electricity to 0, pending to 0, mark all as paid via UPI')" style="padding:5px 12px;background:rgba(124,92,255,0.15);border:1px solid rgba(124,92,255,0.35);border-radius:20px;color:#a78bfa;cursor:pointer;font-size:0.82em;">📋 Bulk entry</button>
+                        <button onclick="quickAsk('Perform monthly reset — carry forward unpaid balances to new month')" style="padding:5px 12px;background:rgba(20,184,166,0.1);border:1px solid rgba(20,184,166,0.3);border-radius:20px;color:var(--accent-teal);cursor:pointer;font-size:0.82em;">Monthly reset</button>
                     </div>
                 </div>
             </div>
@@ -7238,7 +7242,59 @@ VACANT ROOMS: ${vacant.map(r=>r.name).join(', ')||'None'}
 MONTHLY REVENUE (${year}):
 ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m,i)=>`${m}: ₹${monthlyRevenue[i].toLocaleString()}`).join(' | ')}
 
-Answer the admin's questions based on this data. Be concise and helpful. Use ₹ for amounts. If something isn't in the data, say so.`;
+Answer the admin's questions based on this data. Be concise and helpful. Use ₹ for amounts. If something isn't in the data, say so.
+
+IMPORTANT — YOU ARE A FULL ADMIN ASSISTANT. YOU CAN READ AND WRITE ALL DATA.
+When the admin asks you to make ANY change, respond with a short confirmation AND a JSON <ACTION> block at the very end.
+
+FORMAT:
+<ACTION>
+{ ...json... }
+</ACTION>
+
+FULL LIST OF ACTIONS:
+
+RENT & BILLING:
+- UPDATE_RENT: {"type":"UPDATE_RENT","tenantName":"...","amount":number}
+- UPDATE_ELECTRICITY: {"type":"UPDATE_ELECTRICITY","tenantName":"...","amount":number}
+- BATCH_ELECTRICITY: {"type":"BATCH_ELECTRICITY","amount":number}  ← sets electricity for ALL tenants
+- BATCH_RENT: {"type":"BATCH_RENT","amount":number}  ← sets rent for ALL tenants
+- SET_ROOM_RENT: {"type":"SET_ROOM_RENT","roomName":"...","amount":number}
+- UPDATE_PENDING: {"type":"UPDATE_PENDING","tenantName":"...","amount":number}
+
+PAYMENTS:
+- MARK_PAID: {"type":"MARK_PAID","tenantName":"...","amount":number,"method":"UPI|Cash|Bank Transfer|Cheque","notes":"..."}
+- APPROVE_PAYMENT: {"type":"APPROVE_PAYMENT","tenantName":"..."}
+- REJECT_PAYMENT: {"type":"REJECT_PAYMENT","tenantName":"...","reason":"..."}
+- BULK_ENTRY: {"type":"BULK_ENTRY","month":"January 2026","method":"UPI","status":"approved","entries":[{"tenantName":"...","rent":number,"electricity":number,"pending":number,"paid":number},...]}
+
+LATE FEES:
+- UPDATE_LATE_FEE: {"type":"UPDATE_LATE_FEE","tenantName":"...","amount":number}
+- APPLY_LATE_FEES: {"type":"APPLY_LATE_FEES","amount":number}  ← applies to all overdue tenants
+- CLEAR_LATE_FEE: {"type":"CLEAR_LATE_FEE","tenantName":"..."}
+- CLEAR_ALL_LATE_FEES: {"type":"CLEAR_ALL_LATE_FEES"}
+
+ROOMS:
+- ADD_ROOM: {"type":"ADD_ROOM","roomName":"...","rent":number}
+- REMOVE_ROOM: {"type":"REMOVE_ROOM","roomName":"..."}
+- RESERVE_ROOM: {"type":"RESERVE_ROOM","roomName":"..."}
+- UNRESERVE_ROOM: {"type":"UNRESERVE_ROOM","roomName":"..."}
+- SET_ROOM_RENT: {"type":"SET_ROOM_RENT","roomName":"...","amount":number}
+
+TENANTS:
+- MARK_VACANT: {"type":"MARK_VACANT","tenantName":"..."}  ← moves tenant to inactive/moved out
+- UPDATE_MOBILE: {"type":"UPDATE_MOBILE","tenantName":"...","mobile":"..."}
+- UPDATE_NAME: {"type":"UPDATE_NAME","tenantName":"...","firstName":"...","lastName":"..."}
+
+SYSTEM:
+- MONTHLY_RESET: {"type":"MONTHLY_RESET"}  ← carries forward unpaid balances to new month
+- SEND_REMINDER: {"type":"SEND_REMINDER","tenantName":"..."}  ← opens WhatsApp reminder
+
+RULES:
+- Match tenant names case-insensitively and partially (e.g. "Rahul" matches "Rahul Sharma")
+- For BULK_ENTRY if the admin says "add entries for all tenants for March 2026", include ALL tenants from TENANT DATA above in the entries array
+- Only emit <ACTION> for actual change requests. For questions/reports, just answer normally.
+- Always confirm what you did in plain language before the <ACTION> block`;
         }
 
         async function sendAIMessage() {
@@ -7313,17 +7369,36 @@ Answer the admin's questions based on this data. Be concise and helpful. Use ₹
                 }
 
                 const data = await response.json();
-                const aiText = data?.choices?.[0]?.message?.content || 'Sorry, I could not process that request.';
-                _aiChatHistory.push({ role: 'assistant', content: aiText });
+                const rawAiText = data?.choices?.[0]?.message?.content || 'Sorry, I could not process that request.';
+
+                // Parse and execute any <ACTION> blocks
+                let actionResult = null;
+                let displayText = rawAiText;
+                const actionMatch = rawAiText.match(/<ACTION>\s*([\s\S]*?)\s*<\/ACTION>/);
+                if (actionMatch) {
+                    displayText = rawAiText.replace(/<ACTION>[\s\S]*?<\/ACTION>/, '').trim();
+                    try {
+                        const actionJson = JSON.parse(actionMatch[1].trim());
+                        actionResult = executeAIAction(actionJson);
+                    } catch(e) {
+                        actionResult = '⚠️ Could not parse action: ' + e.message;
+                    }
+                }
+
+                _aiChatHistory.push({ role: 'assistant', content: displayText });
 
                 // Replace thinking bubble with real response
                 const thinkEl = document.getElementById(thinkId);
                 if (thinkEl) {
-                    thinkEl.querySelector('p:last-child').innerHTML = aiText
+                    let html = displayText
                         .replace(/</g,'&lt;').replace(/>/g,'&gt;')
                         .replace(/\n/g,'<br>')
                         .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
-                    thinkEl.style.borderColor = 'rgba(59,130,246,0.3)';
+                    if (actionResult) {
+                        html += `<div style="margin-top:10px;padding:8px 12px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px;font-size:0.88em;color:var(--accent-green);">${actionResult}</div>`;
+                    }
+                    thinkEl.querySelector('p:last-child').innerHTML = html;
+                    thinkEl.style.borderColor = actionResult ? 'rgba(34,197,94,0.3)' : 'rgba(59,130,246,0.3)';
                     thinkEl.style.background  = 'var(--bg-overlay)';
                 }
             } catch(err) {
@@ -7339,6 +7414,319 @@ Answer the admin's questions based on this data. Be concise and helpful. Use ₹
             sendBtn.disabled = false;
             sendBtn.textContent = 'Send';
             messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        // ============================================================
+        //  AI ACTION EXECUTOR — full admin capability via chat
+        // ============================================================
+        function executeAIAction(json) {
+            const type = json.type;
+
+            // Helper: find occupied room by tenant name (partial, case-insensitive)
+            const findRoom = (name) => {
+                if (!name) return null;
+                const n = name.toLowerCase().trim();
+                return rooms.find(r => r.tenant && r.tenant.name.toLowerCase().includes(n)) || null;
+            };
+
+            // Helper: find room by room name
+            const findRoomByName = (name) => {
+                if (!name) return null;
+                const n = name.toLowerCase().trim();
+                return rooms.find(r => r.name.toLowerCase().includes(n)) || null;
+            };
+
+            // Helper: refresh all UI
+            const refresh = (full = true) => {
+                saveData();
+                if (full) { renderAdminDashboard(); updateStats(); }
+                if (typeof renderRevenueReport === 'function') try { renderRevenueReport(); } catch(e){}
+                if (typeof renderAllRecords === 'function') try { renderAllRecords(); } catch(e){}
+                if (typeof renderRemindersList === 'function') try { renderRemindersList(); } catch(e){}
+            };
+
+            // ── RENT ─────────────────────────────────────────────────
+            if (type === 'UPDATE_RENT') {
+                const room = findRoom(json.tenantName);
+                if (!room) return `❌ Tenant "${json.tenantName}" not found.`;
+                room.tenant.monthlyBilling = room.tenant.monthlyBilling || {};
+                room.tenant.monthlyBilling.rent = json.amount;
+                room.rent = json.amount;
+                refresh(); return `✅ Rent updated to ₹${Number(json.amount).toLocaleString()} for ${room.tenant.name}.`;
+            }
+
+            // ── ELECTRICITY (single) ──────────────────────────────────
+            if (type === 'UPDATE_ELECTRICITY') {
+                const room = findRoom(json.tenantName);
+                if (!room) return `❌ Tenant "${json.tenantName}" not found.`;
+                room.tenant.monthlyBilling = room.tenant.monthlyBilling || {};
+                room.tenant.monthlyBilling.electricityBill = json.amount;
+                refresh(); return `✅ Electricity bill set to ₹${Number(json.amount).toLocaleString()} for ${room.tenant.name}.`;
+            }
+
+            // ── ELECTRICITY (all tenants) ─────────────────────────────
+            if (type === 'BATCH_ELECTRICITY') {
+                let count = 0;
+                rooms.forEach(r => {
+                    if (r.status === 'occupied' && r.tenant) {
+                        r.tenant.monthlyBilling = r.tenant.monthlyBilling || {};
+                        r.tenant.monthlyBilling.electricityBill = json.amount;
+                        count++;
+                    }
+                });
+                refresh(); return `✅ Electricity set to ₹${Number(json.amount).toLocaleString()} for all ${count} tenants.`;
+            }
+
+            // ── PENDING ───────────────────────────────────────────────
+            if (type === 'UPDATE_PENDING') {
+                const room = findRoom(json.tenantName);
+                if (!room) return `❌ Tenant "${json.tenantName}" not found.`;
+                room.tenant.monthlyBilling = room.tenant.monthlyBilling || {};
+                room.tenant.monthlyBilling.pending = json.amount;
+                refresh(); return `✅ Pending set to ₹${Number(json.amount).toLocaleString()} for ${room.tenant.name}.`;
+            }
+
+            // ── LATE FEE (single) ─────────────────────────────────────
+            if (type === 'UPDATE_LATE_FEE') {
+                const room = findRoom(json.tenantName);
+                if (!room) return `❌ Tenant "${json.tenantName}" not found.`;
+                room.tenant.monthlyBilling = room.tenant.monthlyBilling || {};
+                room.tenant.monthlyBilling.lateFee = json.amount;
+                room.tenant.monthlyBilling.lateFeeApplied = json.amount > 0;
+                refresh(); return `✅ Late fee set to ₹${Number(json.amount).toLocaleString()} for ${room.tenant.name}.`;
+            }
+
+            // ── LATE FEE (apply to all overdue) ──────────────────────
+            if (type === 'APPLY_LATE_FEES') {
+                const amt = json.amount || 100;
+                let count = 0;
+                rooms.forEach(r => {
+                    if (r.status === 'occupied' && r.tenant?.monthlyBilling) {
+                        const b = r.tenant.monthlyBilling;
+                        if (computeTotalDue(r) > 0 && !b.lateFeeApplied) {
+                            b.lateFee = amt; b.lateFeeApplied = true; count++;
+                        }
+                    }
+                });
+                refresh(); return `✅ Late fee of ₹${amt} applied to ${count} overdue tenant(s).`;
+            }
+
+            // ── MARK PAYMENT (single) ─────────────────────────────────
+            if (type === 'MARK_PAID') {
+                const room = findRoom(json.tenantName);
+                if (!room) return `❌ Tenant "${json.tenantName}" not found.`;
+                const now = new Date();
+                const payment = {
+                    id: `ai_pay_${Date.now()}`,
+                    roomId: room.id, tenantId: room.tenant.id,
+                    amount: json.amount, paidAmount: json.amount,
+                    electricityBillSnapshot: room.tenant.monthlyBilling?.electricityBill || 0,
+                    pendingCarryForward: 0,
+                    status: 'approved', rentStatus: 'paid', elecStatus: 'paid',
+                    method: json.method || 'UPI', type: json.method || 'UPI',
+                    date: now.toISOString(), paymentDate: now.toISOString(),
+                    month: now.toLocaleString('default',{month:'long',year:'numeric'}),
+                    notes: json.notes || 'Recorded via AI assistant', doneBy: 'AI'
+                };
+                payments.push(payment);
+                if (!room.tenant.paymentHistory) room.tenant.paymentHistory = [];
+                room.tenant.paymentHistory.push(payment);
+                refresh(); return `✅ Payment of ₹${Number(json.amount).toLocaleString()} recorded for ${room.tenant.name} via ${json.method || 'UPI'}.`;
+            }
+
+            // ── BULK ENTRY (multiple tenants, one month) ──────────────
+            if (type === 'BULK_ENTRY') {
+                const month = json.month;
+                const method = json.method || 'UPI';
+                const status = json.status || 'approved';
+                const entries = json.entries || [];
+                if (!month || !entries.length) return '❌ Bulk entry requires month and entries array.';
+                const [mName, yr] = month.split(' ');
+                const mIdx = new Date(`${mName} 1, ${yr}`).getMonth();
+                if (isNaN(mIdx)) return `❌ Invalid month "${month}".`;
+                const payDate = new Date(parseInt(yr), mIdx, 1, 10, 0, 0).toISOString();
+                let saved = 0, skipped = 0;
+                entries.forEach(entry => {
+                    const room = findRoom(entry.tenantName);
+                    if (!room) { skipped++; return; }
+                    const t = room.tenant;
+                    const rentAmt = entry.rent ?? (t.monthlyBilling?.rent || room.rent || 0);
+                    const elecAmt = entry.electricity ?? 0;
+                    const pendAmt = entry.pending ?? 0;
+                    const paidAmt = entry.paid ?? (rentAmt + elecAmt + pendAmt);
+                    const p = {
+                        id: `ai_bulk_${month.replace(/\s/g,'_')}_${t.id}_${Date.now()}`,
+                        roomId: room.id, tenantId: t.id,
+                        amount: rentAmt, paidAmount: paidAmt,
+                        electricityBillSnapshot: elecAmt, pendingCarryForward: pendAmt,
+                        otherCharges: 0, rentStatus: status==='approved'?'paid':'pending',
+                        elecStatus: status==='approved'?'paid':'pending',
+                        status, method, type: method,
+                        notes: `AI bulk entry — ${month}`,
+                        month, paymentDate: payDate, date: payDate,
+                        doneBy: 'AI', isBulkEntry: true, excludeFromCurrentMonth: true
+                    };
+                    payments.push(p);
+                    if (!t.paymentHistory) t.paymentHistory = [];
+                    t.paymentHistory.push(p);
+                    _onPastEntryAdded(t.id);
+                    saved++;
+                });
+                refresh(); return `✅ Bulk entry saved: ${saved} tenant(s) for ${month}. Skipped: ${skipped}.`;
+            }
+
+            // ── ADD ROOM ──────────────────────────────────────────────
+            if (type === 'ADD_ROOM') {
+                const newId = 'room_' + crypto.randomUUID();
+                const name = json.roomName || ('Room ' + (rooms.length + 1));
+                rooms.push({ id: newId, name, status: 'vacant', rent: json.rent || 0, tenant: null });
+                refresh(); return `✅ Room "${name}" added successfully.`;
+            }
+
+            // ── REMOVE ROOM (vacant only) ─────────────────────────────
+            if (type === 'REMOVE_ROOM') {
+                const room = findRoomByName(json.roomName);
+                if (!room) return `❌ Room "${json.roomName}" not found.`;
+                if (room.status === 'occupied') return `❌ Cannot remove occupied room "${room.name}". Mark it vacant first.`;
+                rooms.splice(rooms.indexOf(room), 1);
+                refresh(); return `✅ Room "${room.name}" removed.`;
+            }
+
+            // ── RESERVE / UNRESERVE ROOM ──────────────────────────────
+            if (type === 'RESERVE_ROOM') {
+                const room = findRoomByName(json.roomName);
+                if (!room) return `❌ Room "${json.roomName}" not found.`;
+                room.status = 'reserved';
+                refresh(); return `✅ Room "${room.name}" marked as Reserved.`;
+            }
+            if (type === 'UNRESERVE_ROOM') {
+                const room = findRoomByName(json.roomName);
+                if (!room) return `❌ Room "${json.roomName}" not found.`;
+                room.status = 'vacant';
+                refresh(); return `✅ Room "${room.name}" is now Vacant.`;
+            }
+
+            // ── MARK TENANT VACANT (move out) ─────────────────────────
+            if (type === 'MARK_VACANT') {
+                const room = findRoom(json.tenantName);
+                if (!room) return `❌ Tenant "${json.tenantName}" not found.`;
+                const t = room.tenant;
+                const archived = payments.filter(p => p.tenantId === t.id);
+                inactiveTenants.push({
+                    ...t, roomName: room.name,
+                    moveOutDate: new Date().toISOString().split('T')[0],
+                    finalDues: computeTotalDue(room), status: 'inactive',
+                    archivedPayments: archived, paymentHistory: t.paymentHistory || []
+                });
+                payments = payments.filter(p => p.tenantId !== t.id);
+                pendingApprovals = pendingApprovals.filter(a => a.tenantId !== t.id);
+                room.tenant = null; room.status = 'vacant'; room.rent = 0;
+                refresh(); return `✅ ${t.name} moved to inactive. Room "${room.name}" is now vacant.`;
+            }
+
+            // ── UPDATE MOBILE ─────────────────────────────────────────
+            if (type === 'UPDATE_MOBILE') {
+                const room = findRoom(json.tenantName);
+                if (!room) return `❌ Tenant "${json.tenantName}" not found.`;
+                room.tenant.mobile = json.mobile;
+                refresh(false); saveData(); return `✅ Mobile updated to ${json.mobile} for ${room.tenant.name}.`;
+            }
+
+            // ── UPDATE TENANT NAME ────────────────────────────────────
+            if (type === 'UPDATE_NAME') {
+                const room = findRoom(json.tenantName);
+                if (!room) return `❌ Tenant "${json.tenantName}" not found.`;
+                const old = room.tenant.name;
+                room.tenant.firstName = json.firstName || room.tenant.firstName;
+                room.tenant.lastName = json.lastName || room.tenant.lastName;
+                room.tenant.name = (json.firstName || room.tenant.firstName) + ' ' + (json.lastName || room.tenant.lastName);
+                refresh(); return `✅ Tenant name updated from "${old}" to "${room.tenant.name}".`;
+            }
+
+            // ── MONTHLY RESET ─────────────────────────────────────────
+            if (type === 'MONTHLY_RESET') {
+                performMonthlyUpdate();
+                return `✅ Monthly reset performed for all occupied rooms.`;
+            }
+
+            // ── APPROVE PENDING PAYMENT ───────────────────────────────
+            if (type === 'APPROVE_PAYMENT') {
+                const approval = json.approvalId
+                    ? pendingApprovals.find(a => a.id === json.approvalId)
+                    : pendingApprovals.find(a => {
+                        const r = rooms.find(r2 => r2.id === a.roomId);
+                        return r?.tenant?.name?.toLowerCase().includes((json.tenantName||'').toLowerCase());
+                    });
+                if (!approval) return `❌ No pending approval found${json.tenantName ? ` for "${json.tenantName}"` : ''}.`;
+                approveItem(approval.id);
+                return `✅ Payment approved for approval ID ${approval.id}.`;
+            }
+
+            // ── REJECT PENDING PAYMENT ────────────────────────────────
+            if (type === 'REJECT_PAYMENT') {
+                const approval = pendingApprovals.find(a => {
+                    const r = rooms.find(r2 => r2.id === a.roomId);
+                    return r?.tenant?.name?.toLowerCase().includes((json.tenantName||'').toLowerCase());
+                });
+                if (!approval) return `❌ No pending approval found for "${json.tenantName}".`;
+                rejectItem(approval.id, json.reason || 'Rejected by AI on admin instruction');
+                return `✅ Payment rejected for ${json.tenantName}.`;
+            }
+
+            // ── SEND WHATSAPP REMINDER ────────────────────────────────
+            if (type === 'SEND_REMINDER') {
+                const room = findRoom(json.tenantName);
+                if (!room) return `❌ Tenant "${json.tenantName}" not found.`;
+                sendWhatsAppReminder(room.id);
+                return `✅ WhatsApp reminder opened for ${room.tenant.name}.`;
+            }
+
+            // ── CLEAR LATE FEE ────────────────────────────────────────
+            if (type === 'CLEAR_LATE_FEE') {
+                const room = findRoom(json.tenantName);
+                if (!room) return `❌ Tenant "${json.tenantName}" not found.`;
+                room.tenant.monthlyBilling = room.tenant.monthlyBilling || {};
+                room.tenant.monthlyBilling.lateFee = 0;
+                room.tenant.monthlyBilling.lateFeeApplied = false;
+                refresh(); return `✅ Late fee cleared for ${room.tenant.name}.`;
+            }
+
+            // ── CLEAR ALL LATE FEES ───────────────────────────────────
+            if (type === 'CLEAR_ALL_LATE_FEES') {
+                let count = 0;
+                rooms.forEach(r => {
+                    if (r.status === 'occupied' && r.tenant?.monthlyBilling) {
+                        r.tenant.monthlyBilling.lateFee = 0;
+                        r.tenant.monthlyBilling.lateFeeApplied = false;
+                        count++;
+                    }
+                });
+                refresh(); return `✅ Late fees cleared for all ${count} tenants.`;
+            }
+
+            // ── BATCH RENT UPDATE (all tenants) ───────────────────────
+            if (type === 'BATCH_RENT') {
+                let count = 0;
+                rooms.forEach(r => {
+                    if (r.status === 'occupied' && r.tenant) {
+                        r.tenant.monthlyBilling = r.tenant.monthlyBilling || {};
+                        r.tenant.monthlyBilling.rent = json.amount;
+                        r.rent = json.amount; count++;
+                    }
+                });
+                refresh(); return `✅ Rent set to ₹${Number(json.amount).toLocaleString()} for all ${count} tenants.`;
+            }
+
+            // ── SET ROOM RENT ──────────────────────────────────────────
+            if (type === 'SET_ROOM_RENT') {
+                const room = findRoomByName(json.roomName);
+                if (!room) return `❌ Room "${json.roomName}" not found.`;
+                room.rent = json.amount;
+                if (room.tenant?.monthlyBilling) room.tenant.monthlyBilling.rent = json.amount;
+                refresh(); return `✅ Rent for "${room.name}" set to ₹${Number(json.amount).toLocaleString()}.`;
+            }
+
+            return `⚠️ Unknown action type: ${type}`;
         }
 
         function quickAsk(question) {
