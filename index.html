@@ -571,13 +571,10 @@
         }
         .header-left { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; }
         .header-logo {
-            width: 56px; height: 56px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, rgba(124,92,255,.9) 0%, rgba(99,102,241,.8) 50%, rgba(59,130,246,.7) 100%);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.1em; font-weight: 800; color: #fff;
-            letter-spacing: -.02em;
-            box-shadow: 0 0 18px rgba(124,92,255,.5), 0 0 40px rgba(124,92,255,.18);
+            width: 70px; height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            box-shadow: 0 0 22px rgba(124,92,255,.55), 0 0 50px rgba(124,92,255,.2);
             flex-shrink: 0;
             animation: logoPulse 6s ease-in-out infinite;
         }
@@ -2047,7 +2044,7 @@
                 <div class="login-logo-wrap">
                     <div class="login-logo-ring-2"></div>
                     <div class="login-logo-ring"></div>
-                    <img src="https://jvjjymuezpchchgfsvav.supabase.co/storage/v1/object/public/rentzen-images/logo_clean.png" style="width:48px;height:48px;border-radius:50%;object-fit:cover;position:relative;z-index:1;box-shadow:0 0 20px rgba(124,92,255,.55),0 0 50px rgba(124,92,255,.18);" alt="RentZen Logo">
+                    <img src="https://jvjjymuezpchchgfsvav.supabase.co/storage/v1/object/public/rentzen-images/logo_clean.png" style="width:60px;height:60px;border-radius:50%;object-fit:cover;position:relative;z-index:1;box-shadow:0 0 22px rgba(124,92,255,.55),0 0 50px rgba(124,92,255,.2);" alt="RentZen Logo">
                 </div>
                 <span style="font-size:2em;font-weight:800;letter-spacing:-0.03em;"><span style="color:#fff;">Rent</span><span style="color:#a78bfa;">Zen</span></span>
             </div>
@@ -2112,7 +2109,7 @@
         <div class="container">
             <header>
                 <div class="header-left">
-                    <img src="https://jvjjymuezpchchgfsvav.supabase.co/storage/v1/object/public/rentzen-images/logo_clean.png" class="header-logo" style="border-radius:50%;object-fit:cover;padding:0;width:56px;height:56px;" alt="RentZen Logo">
+                    <img src="https://jvjjymuezpchchgfsvav.supabase.co/storage/v1/object/public/rentzen-images/logo_clean.png" class="header-logo" alt="RentZen Logo">
                     <div>
                         <h1 class="gradient-text" style="background:none;-webkit-background-clip:unset;-webkit-text-fill-color:unset;background-clip:unset;font-size:2.4em;font-weight:800;letter-spacing:-0.04em;"><span style="color:#fff;">Rent</span><span style="color:#a78bfa;">Zen</span></h1>
                         <p>Admin Dashboard &nbsp;·&nbsp; <span style="color:var(--green);font-size:0.9em;" id="headerDbStatus">Cloud Edition</span></p>
@@ -2349,7 +2346,7 @@
                 <div class="glass-card">
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
                         <h3 style="color:var(--text-secondary);"> AI Assistant</h3>
-                        <span style="background:rgba(85,239,196,0.15);border:1px solid rgba(85,239,196,0.35);color:var(--accent-teal);padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:700;">Powered by Groq</span>
+                        <span style="background:rgba(85,239,196,0.15);border:1px solid rgba(85,239,196,0.35);color:var(--accent-teal);padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:700;">Powered by Gemini</span>
                     </div>
                     <p style="color:var(--text-muted);font-size:0.88em;margin-bottom:18px;">Full admin control via chat — bulk entries, payments, rent updates, late fees, room management, monthly resets &amp; more. The AI reads and writes your live data in real time.</p>
 
@@ -7873,49 +7870,11 @@ SEND_REMINDER:{"type":"SEND_REMINDER","tenantName":""}`;
             try {
                 const systemPrompt = buildDataContext();
 
-                // Build conversation history for Groq (last 10 turns)
-                // ── KEY ROTATION SYSTEM ──────────────────────────────
-                const _keys = [
-                    ['gsk_j5X0QsvAg','SWEXZAYS','WzKWGdyb3FYFhcm6wxrpZBjnMly5d5adZnJ'].join(''),
-                    ['gsk_m4fQLp31W','HtqmJdJE','eSaWGdyb3FYcYMk1uX6OD7E7pHVtt7g73gu'].join(''),
-                    ['gsk_5SAuKxMcn','qAOHIyky','G4AWGdyb3FYPVXkQWbZPiSUyBMQOcVKifQL'].join(''),
-                    ['gsk_L3yD9eem','vGQn2YbY','41LdWGdyb3FYiASjanN5amnHgp6a4tnh5c3H'].join(''),
-                    ['gsk_6wu0mlmG','dROpaj1W','JOiuWGdyb3FYN0R9ZEVkQDJmolKlYoDg7UDr'].join(''),
-                    ['gsk_f89BHXhG','B3MyWC9x','QFwAWGdyb3FY35W6wXLGN2TQr8tMDDJYJmMo'].join(''),
-                    ['gsk_F2wP6mKq','fLbnXmYN','ES9HWGdyb3FYl20eeiaN6M8uhle3aIqHD1Mq'].join(''),
-                    ['gsk_DnlpD0Rm','zb5yMWuj','bIhOWGdyb3FYsQMCWmjCNzx5UW2EEBC05xLc'].join(''),
-                    ['gsk_dfwXoGUS','gQASDA0H','0PXiWGdyb3FYPsDuEo4UbVk5uunlH0BLmLdO'].join(''),
-                    ['gsk_wRTU3Hro','ZOaBvFMy','aPoFWGdyb3FYVzXgRyY0OFnd316r09huJt0p'].join(''),
-                ];
-                if (!window._groqKeyIndex) window._groqKeyIndex = 0;
-                if (!window._groqKeyCooldowns) window._groqKeyCooldowns = {};
-                const _getNextKey = () => {
-                    const now = Date.now();
-                    for (let i = 0; i < _keys.length; i++) {
-                        const idx = (window._groqKeyIndex + i) % _keys.length;
-                        const cooldownUntil = window._groqKeyCooldowns[idx] || 0;
-                        if (now >= cooldownUntil) {
-                            window._groqKeyIndex = idx;
-                            return { key: _keys[idx], idx };
-                        }
-                    }
-                    // All on cooldown — use the one with shortest remaining cooldown
-                    let minCooldown = Infinity, minIdx = 0;
-                    for (let i = 0; i < _keys.length; i++) {
-                        const c = window._groqKeyCooldowns[i] || 0;
-                        if (c < minCooldown) { minCooldown = c; minIdx = i; }
-                    }
-                    window._groqKeyIndex = minIdx;
-                    return { key: _keys[minIdx], idx: minIdx };
-                };
-                const _markKeyCooldown = (idx, seconds = 60) => {
-                    window._groqKeyCooldowns[idx] = Date.now() + seconds * 1000;
-                    window._groqKeyIndex = (idx + 1) % _keys.length;
-                };
+                // ── SUPABASE EDGE FUNCTION CALL ──────────────────────
+                // API key is stored securely on Supabase server — never exposed to browser.
+                // Model chain: Gemini 2.5 Flash → 2.5 Flash-Lite → 2.0 Flash-Lite
                 const historySlice = _aiChatHistory.slice(-10);
-
-                // Groq uses OpenAI-compatible messages format
-                const groqMessages = [
+                const messages = [
                     { role: 'system', content: systemPrompt },
                     ...historySlice.map(msg => ({
                         role:    msg.role === 'assistant' ? 'assistant' : 'user',
@@ -7923,52 +7882,21 @@ SEND_REMINDER:{"type":"SEND_REMINDER","tenantName":""}`;
                     }))
                 ];
 
-                // ── AUTO-ROTATING FETCH WITH FALLBACK ────────────────
-                let data, lastError;
-                for (let attempt = 0; attempt < _keys.length; attempt++) {
-                    const { key: GROQ_API_KEY, idx: keyIdx } = _getNextKey();
-                    try {
-                        const response = await fetch(
-                            'https://api.groq.com/openai/v1/chat/completions',
-                            {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${GROQ_API_KEY}`
-                                },
-                                body: JSON.stringify({
-                                    model: 'llama-3.3-70b-versatile',
-                                    messages: groqMessages,
-                                    max_tokens: 1024
-                                })
-                            }
-                        );
-                        if (response.status === 429) {
-                            // Rate limited — put this key on cooldown and try next
-                            _markKeyCooldown(keyIdx, 65);
-                            lastError = `Key ${keyIdx + 1} rate limited, trying next...`;
-                            continue;
-                        }
-                        if (!response.ok) {
-                            const errData = await response.json().catch(() => ({}));
-                            const msg = errData?.error?.message || `HTTP ${response.status}`;
-                            // If auth error, skip this key permanently for this session
-                            if (response.status === 401) { _markKeyCooldown(keyIdx, 3600); continue; }
-                            throw new Error(msg);
-                        }
-                        data = await response.json();
-                        // Success — advance key index for next request (round-robin)
-                        window._groqKeyIndex = (keyIdx + 1) % _keys.length;
-                        break;
-                    } catch(fetchErr) {
-                        if (fetchErr.message?.includes('rate') || fetchErr.message?.includes('429')) {
-                            _markKeyCooldown(keyIdx, 65); continue;
-                        }
-                        throw fetchErr;
+                const response = await fetch(
+                    'https://jvjjymuezpchchgfsvav.supabase.co/functions/v1/gemini-proxy',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ messages, max_tokens: 1024 })
                     }
+                );
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData?.error || `HTTP ${response.status}`);
                 }
-                if (!data) throw new Error(lastError || 'All API keys are rate limited. Please wait a moment and try again.');
-                const rawAiText = data?.choices?.[0]?.message?.content || 'Sorry, I could not process that request.';
+                const data = await response.json();
+                const rawAiText = data?.text || 'Sorry, I could not process that request.';
 
                 // Parse and execute any <ACTION> blocks
                 let actionResult = null;
