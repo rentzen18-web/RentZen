@@ -1135,16 +1135,135 @@
 
         /* ── RESPONSIVE ──────────────────────────────────────────────── */
         @media (max-width: 768px) {
-            .rooms-grid { grid-template-columns: 1fr; }
+            /* Layout */
+            .container { padding: 12px 12px 60px; }
+            .rooms-grid { grid-template-columns: 1fr; gap: 12px; }
             .form-row   { grid-template-columns: 1fr; }
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .header-actions { float: none; flex-wrap: wrap; }
-            .nav-tabs { background: transparent; padding: 0; gap: 6px; }
-            .nav-tab  { font-size: 0.8em; padding: 7px 12px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+            /* Header */
+            header { padding: 14px 16px; flex-direction: column; align-items: flex-start; gap: 10px; }
+            .header-left { width: 100%; gap: 10px; }
+            .header-logo { width: 36px; height: 36px; font-size: 1em; flex-shrink: 0; }
+            header h1.gradient-text { font-size: 1.1em; }
+            header p { font-size: 0.75em; }
+            .header-actions {
+                width: 100%;
+                float: none;
+                flex-wrap: wrap;
+                gap: 6px;
+                display: flex;
+            }
+            .header-actions .btn { font-size: 0.78em; padding: 7px 11px; }
+
+            /* Nav tabs — scrollable row */
+            .nav-tabs {
+                background: transparent;
+                padding: 0;
+                gap: 4px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+                padding-bottom: 4px;
+            }
+            .nav-tabs::-webkit-scrollbar { display: none; }
+            .nav-tab { font-size: 0.78em; padding: 7px 12px; white-space: nowrap; flex-shrink: 0; }
+
+            /* Stat cards */
+            .stat-card { padding: 14px 12px; }
+            .stat-value { font-size: 1.5em; }
+
+            /* Room / glass cards */
+            .room-card, .glass-card { padding: 14px; }
+            .card-actions { flex-direction: column; gap: 6px; }
+            .card-actions .btn { width: 100%; min-width: unset; }
+
+            /* Modals */
+            .modal-content {
+                max-width: 100% !important;
+                width: calc(100vw - 24px) !important;
+                margin: 12px auto;
+                padding: 18px 14px;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            .modal-header { flex-wrap: wrap; gap: 8px; }
+            .modal-title { font-size: 1em; }
+
+            /* Forms */
+            .form-group input,
+            .form-group select,
+            .form-group textarea { font-size: 16px; /* prevents iOS zoom */ }
+
+            /* Tables — horizontal scroll */
+            table { font-size: 0.8em; }
+            .table-wrapper, [style*="overflow-x:auto"], [style*="overflow-x: auto"] {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Notification — full-width on mobile */
+            .notification {
+                right: 8px;
+                left: 8px;
+                min-width: unset;
+                max-width: unset;
+                transform: translateY(-120px);
+            }
+            .notification.show { transform: translateY(0); }
+
+            /* Sync bar */
+            .sync-bar { font-size: 0.7em; padding: 0 10px; }
+            .sync-time { display: none; }
+
+            /* Buttons globally */
+            .btn { font-size: 0.82em; padding: 8px 13px; }
+
+            /* Detail rows in modals */
+            .detail-row { flex-direction: column; gap: 2px; }
+            .detail-label { min-width: unset; font-size: 0.75em; }
+
+            /* Login box */
+            .login-box { padding: 28px 20px; width: calc(100vw - 40px); max-width: 400px; }
         }
+
         @media (max-width: 480px) {
-            .stats-grid { grid-template-columns: 1fr 1fr; }
-            .container { padding: 14px; }
+            .container { padding: 10px 10px 60px; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .stat-value { font-size: 1.3em; }
+            .stat-card { padding: 12px 10px; }
+
+            /* Stack header actions vertically on very small screens */
+            .header-actions { flex-direction: column; }
+            .header-actions .btn { width: 100%; justify-content: center; }
+
+            /* Single column stats on very small screens */
+            .nav-tab { font-size: 0.72em; padding: 6px 9px; }
+
+            /* Modal full screen feel */
+            .modal-content {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                margin: 0;
+                border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                max-height: 92vh;
+            }
+            .modal { align-items: flex-end; }
+
+            /* Room cards */
+            .room-header { flex-wrap: wrap; gap: 6px; }
+
+            /* Bulk entry table — allow horizontal scroll */
+            #bulkEntryTableWrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+            /* Chart containers */
+            canvas { max-width: 100% !important; height: auto !important; }
         }
 
         /* ══════════════════════════════════════════════════════
@@ -2314,8 +2433,8 @@
           -->
     <script>
         // -- SUPABASE CREDENTIALS (optional - app works fully without these) --
-        const SUPABASE_URL      = "https://uzbblvnjqwufyshgbzeb.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_7W5if5MxxKVlTJUP1Zf5kg_CEA3otA9";
+        const SUPABASE_URL      = "https://jvjjymuezpchchgfsvav.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_H1OC1fRt1_3sdapwb38I5w_fpDRczF1";
 
         // -- Connection state -------------------------------------------------
         // _sbEnabled starts true if credentials look real; flips to false permanently
@@ -2393,7 +2512,7 @@
     <script>
         // ============================================================
         //  GALAXY RENTAL - SUPABASE CLOUD BACKEND + MULTI-USER LOGIN
-        //  (window.storage used as fallback when Supabase not set up)
+        //  All data is saved exclusively to Supabase. localStorage is offline-read only.
         // ============================================================
 
         // ── CONFIG: names that appear in cash-received dropdowns ──────────────
@@ -2587,35 +2706,44 @@
         }
 
         // ============================================================
-        //  DB PRIMITIVES - Supabase first, window.storage fallback
+        //  DB PRIMITIVES - Supabase only (localStorage is offline-read fallback)
         // ============================================================
         async function dbGet(key) {
-            // Try Supabase first
+            // Supabase is the ONLY cloud source of truth
             if (supabaseAvailable && window.sbGet) {
                 try {
                     const val = await window.sbGet(key);
                     if (val !== null) return val;
                 } catch(e) {}
             }
-            // Fallback: window.storage
+            // Offline fallback: read from localStorage only
             try {
-                const result = await window.storage.get(key);
-                return result ? JSON.parse(result.value) : null;
-            } catch(e) { return null; }
+                const lsMap = {
+                    'galaxy:rooms':         'galaxy_rooms',
+                    'galaxy:inactive':      'galaxy_inactive',
+                    'galaxy:payments':      'galaxy_payments',
+                    'galaxy:approvals':     'galaxy_approvals',
+                    'galaxy:notifications': 'galaxy_notifications'
+                };
+                const lsKey = lsMap[key];
+                if (lsKey) {
+                    const raw = localStorage.getItem(lsKey);
+                    return raw ? JSON.parse(raw) : null;
+                }
+            } catch(e) {}
+            return null;
         }
 
         async function dbSet(key, value) {
-            let ok = false;
-            // Write to Supabase
+            // Supabase is the ONLY destination for cloud writes
             if (supabaseAvailable && window.sbSet) {
-                try { ok = await window.sbSet(key, value); } catch(e) {}
+                try {
+                    const ok = await window.sbSet(key, value);
+                    if (ok) return true;
+                } catch(e) {}
             }
-            // Also write to window.storage (dual-write for redundancy)
-            try {
-                await window.storage.set(key, JSON.stringify(value));
-                ok = true;
-            } catch(e) {}
-            return ok;
+            // If Supabase unavailable, silently fall back to localStorage only
+            return false;
         }
 
         // ============================================================
@@ -2695,29 +2823,27 @@
                     ? ` ${currentUser.room?.name || 'Tenant'}`
                     : ' Login';
             try {
-                await window.storage.set(
-                    `galaxy:presence:${deviceId}`,
-                    JSON.stringify({ deviceId, userType: currentUser?.type || 'unknown', label, ts: Date.now() }),
-                    true   // shared = visible to all sessions
-                );
+                const presenceKey = `galaxy:presence:${deviceId}`;
+                const presenceData = { deviceId, userType: currentUser?.type || 'unknown', label, ts: Date.now() };
+                if (supabaseAvailable && window.sbSet) {
+                    await window.sbSet(presenceKey, presenceData);
+                }
             } catch(e) {}
             updateOnlinePanel();
         }
 
         async function getActiveDevices() {
-            if (!dbAvailable) return { count: 1, users: [] };
+            if (!dbAvailable || !supabaseAvailable || !window.sbGet) return { count: 1, users: [] };
             try {
-                const result = await window.storage.list('galaxy:presence:', true);
-                if (!result || !result.keys) return { count: 1, users: [] };
+                // Fetch all presence keys from Supabase kv_store
+                const rows = await _sbReq('GET', `kv_store?key=like.galaxy:presence:%25&select=key,value`);
+                if (!Array.isArray(rows)) return { count: 1, users: [] };
                 const now = Date.now();
                 const users = [];
-                for (const key of result.keys) {
+                for (const row of rows) {
                     try {
-                        const r = await window.storage.get(key, true);
-                        if (r) {
-                            const p = JSON.parse(r.value);
-                            if (now - p.ts < PRESENCE_TTL) users.push(p);
-                        }
+                        const p = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+                        if (p && now - p.ts < PRESENCE_TTL) users.push(p);
                     } catch(e) {}
                 }
                 return { count: Math.max(1, users.length), users };
@@ -2767,12 +2893,13 @@
         //  AVAILABILITY CHECK
         // ============================================================
         async function checkDbAvailability() {
-            // Check Supabase first
+            // Supabase is the only backend — check it with a ping write
             if (window._sbReady && window.sbGet) {
                 try {
                     const ok = await window.sbSet('galaxy:ping', { ts: Date.now() });
                     if (ok) {
                         supabaseAvailable = true;
+                        return true;
                     } else {
                         supabaseAvailable = false;
                         _sbDisable('ping failed');
@@ -2782,14 +2909,8 @@
                     _sbDisable('ping exception');
                 }
             }
-            // Check window.storage (primary fallback - always works in Claude.ai)
-            try {
-                await window.storage.set('galaxy:ping', JSON.stringify({ ts: Date.now() }));
-                const r = await window.storage.get('galaxy:ping');
-                return r !== null;
-            } catch(e) {
-                return supabaseAvailable;
-            }
+            // Supabase not configured or unreachable — offline mode
+            return false;
         }
 
         // ============================================================
@@ -5877,12 +5998,10 @@ Generated on: ${new Date().toLocaleString()}
 
         // ── SUPABASE IMAGE UPLOAD ────────────────────────────────────────
         // Uploads a File to Supabase Storage bucket "rentzen-images" and
-        // returns the public URL string.  Falls back to base64 data-URL if
-        // Supabase is unavailable (so the app keeps working offline).
+        // Returns the public Supabase Storage URL, or null if upload fails.
         async function uploadImageToSupabase(file, folder = 'uploads') {
             if (!file) return null;
 
-            // Try Supabase Storage first
             if (window._sbClient) {
                 try {
                     const ext      = file.name.split('.').pop() || 'jpg';
@@ -5902,13 +6021,13 @@ Generated on: ${new Date().toLocaleString()}
 
                     return urlData.publicUrl;
                 } catch (err) {
-                    console.warn('Supabase image upload failed, falling back to base64:', err.message);
+                    showNotification('Image upload failed. Please check your internet connection and try again.', 'error');
+                    return null;
                 }
             }
 
-            // Fallback: base64 (works offline, but uses localStorage space)
-            showNotification('Image saved locally (offline mode). Large images may fill storage.', 'info');
-            return fileToBase64(file);
+            showNotification('Cloud storage unavailable. Please check your internet and try again.', 'error');
+            return null;
         }
 
         // ============================================================
@@ -6291,7 +6410,8 @@ Please pay via Cash or PhonePe: 7999287071`;
         //  TECH STACK INFO
         // ============================================================
         // Cloud backend: Supabase (PostgreSQL + Realtime WebSocket push)
-        // Fallback: window.storage (Claude cloud) - always on, no config needed
+        // ALL data (rooms, tenants, payments, approvals, notifications) is saved ONLY to Supabase.
+        // localStorage is used as a read-only offline fallback when Supabase is unreachable.
         // Multi-user: Each browser tab/device gets its own sessionStorage session
         //              Admin + all tenants can be logged in simultaneously
         // To deploy: Upload this HTML to Vercel/Netlify/AWS S3 static hosting
@@ -6333,7 +6453,7 @@ ALTER TABLE kv_store ENABLE ROW LEVEL SECURITY;<br>
 CREATE POLICY "Public" ON kv_store FOR ALL USING (true) WITH CHECK (true);
                             </code>
                             3. Settings  API  copy <strong>Project URL</strong> &amp; <strong>anon public key</strong> into this file<br>
-                            <em style="color:var(--text-secondary);">Currently using window.storage (Claude cloud) as backend - all data is safe. </em>
+                            <em style="color:var(--accent-rose);">⚠️ Supabase not connected — data cannot be saved until you complete setup above.</em>
                         </div>`;
                     const header = document.querySelector('header');
                     if (header) header.after(banner);
@@ -7927,8 +8047,8 @@ RULES:
 
         // Clean up presence on page unload
         window.addEventListener('beforeunload', async () => {
-            if (dbAvailable && deviceId) {
-                try { await window.storage.delete(`galaxy:presence:${deviceId}`, true); } catch(e) {}
+            if (dbAvailable && supabaseAvailable && deviceId && window.sbSet) {
+                try { await window.sbSet(`galaxy:presence:${deviceId}`, null); } catch(e) {}
             }
         });
 
