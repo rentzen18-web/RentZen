@@ -2,8 +2,43 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/png" sizes="512x512" href="https://jvjjymuezpchchgfsvav.supabase.co/storage/v1/object/public/rentzen-images/Logo.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="https://jvjjymuezpchchgfsvav.supabase.co/storage/v1/object/public/rentzen-images/Logo.png">
+    <link rel="icon" type="image/png" id="dynamicFavicon">
+    <script>
+    (function(){
+        var LOGO = 'https://jvjjymuezpchchgfsvav.supabase.co/storage/v1/object/public/rentzen-images/Logo.png';
+        var SIZE = 512;
+        var ZOOM = 1.72;
+        function makeFavicon() {
+            var canvas = document.createElement('canvas');
+            canvas.width = SIZE; canvas.height = SIZE;
+            var ctx = canvas.getContext('2d');
+            var img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = function() {
+                ctx.clearRect(0, 0, SIZE, SIZE);
+                ctx.beginPath();
+                ctx.arc(SIZE/2, SIZE/2, SIZE/2, 0, Math.PI*2);
+                ctx.closePath();
+                ctx.clip();
+                var draw = SIZE * ZOOM;
+                var off  = (SIZE - draw) / 2;
+                ctx.drawImage(img, off, off, draw, draw);
+                var link = document.getElementById('dynamicFavicon');
+                if (link) link.href = canvas.toDataURL('image/png');
+            };
+            img.onerror = function() {
+                var link = document.getElementById('dynamicFavicon');
+                if (link) link.href = LOGO;
+            };
+            img.src = LOGO + '?t=' + Date.now();
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', makeFavicon);
+        } else {
+            makeFavicon();
+        }
+    })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RentZen v32</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -2161,7 +2196,7 @@
                 <div class="nav-tab" onclick="showTab('revenue')"> Revenue</div>
                 <div class="nav-tab" onclick="showTab('reminders')"> Reminders</div>
                 <div class="nav-tab" onclick="showTab('analytics')"> Analytics</div>
-                <div class="nav-tab" onclick="showTab('aichat')">JARVIS</div>
+                <div class="nav-tab" onclick="showTab('aichat')">🤖 Jarvis</div>
             </div>
 
             <!-- Active Rooms Tab -->
@@ -2348,14 +2383,14 @@
             <div id="aichatTab" class="tab-content" style="display: none;">
                 <div class="glass-card">
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
-                        <h3 style="color:var(--text-secondary);">JARVIS</h3>
+                        <h3 style="color:var(--text-secondary);">🤖 Jarvis</h3>
                         <span style="background:rgba(85,239,196,0.15);border:1px solid rgba(85,239,196,0.35);color:var(--accent-teal);padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:700;">Powered by Groq</span>
                     </div>
                     <p style="color:var(--text-muted);font-size:0.88em;margin-bottom:18px;">Full admin control via chat — Jarvis can navigate the app, manage payments, update rents, manage rooms, monthly resets & more. Reads and writes your live data in real time.</p>
 
                     <div id="aiChatMessages" style="min-height:280px;max-height:420px;overflow-y:auto;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:14px;padding:16px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px;">
                         <div style="background:var(--bg-hover);border:1px solid rgba(79,172,254,0.2);border-radius:10px;padding:12px;align-self:flex-start;max-width:85%;">
-                            <p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">JARVIS</p>
+                            <p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">🤖 Jarvis</p>
                             <p style="color:var(--text-primary);font-size:0.92em;">Hello! I'm <strong>Jarvis</strong>, your RentZen AI — I can <strong>read and write</strong> all your data and control the entire website.<br><br><strong style="color:#a78bfa;">📋 What I can do:</strong><br>• Record &amp; approve payments<br>• Update rent, electricity, pending<br>• Move tenants in/out, manage rooms<br>• Monthly reset with carry-forward<br>• Send WhatsApp reminders<br>• Revenue &amp; occupancy reports<br>• Navigate to any section of the app<br><br>Just type naturally — <em>"Mark Rahul paid ₹7000 via Cash"</em>, <em>"Show revenue tab"</em> or <em>"Add tenant Angad to Room3"</em></p>
                         </div>
                     </div>
@@ -2372,7 +2407,10 @@
                         <button onclick="quickAsk('Give me a full revenue summary')" style="padding:5px 12px;background:rgba(85,239,196,0.1);border:1px solid rgba(85,239,196,0.3);border-radius:20px;color:var(--accent-teal);cursor:pointer;font-size:0.82em;">Revenue summary</button>
                         <button onclick="quickAsk('Who has not paid this month?')" style="padding:5px 12px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);border-radius:20px;color:var(--accent-rose);cursor:pointer;font-size:0.82em;">Unpaid tenants</button>
                         <button onclick="quickAsk('Show all room and tenant status')" style="padding:5px 12px;background:var(--bg-hover);border:1px solid rgba(79,172,254,0.3);border-radius:20px;color:var(--accent-blue);cursor:pointer;font-size:0.82em;">All status</button>
+                        <button onclick="quickAsk('Set electricity bill to 700 for all tenants')" style="padding:5px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:20px;color:var(--accent-amber);cursor:pointer;font-size:0.82em;">⚡ Bulk electricity</button>
+                        <button onclick="quickAsk('Apply late fees of 100 to all overdue tenants')" style="padding:5px 12px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);border-radius:20px;color:var(--accent-rose);cursor:pointer;font-size:0.82em;">Apply late fees</button>
 
+                        <button onclick="quickAsk('Perform monthly reset — carry forward unpaid balances to new month')" style="padding:5px 12px;background:rgba(20,184,166,0.1);border:1px solid rgba(20,184,166,0.3);border-radius:20px;color:var(--accent-teal);cursor:pointer;font-size:0.82em;">Monthly reset</button>
                     </div>
                 </div>
             </div>
@@ -4410,23 +4448,16 @@
                 return;
             }
 
-            const firstName = document.getElementById('firstName').value.trim();
-            const lastName = document.getElementById('lastName').value.trim();
-            const mobile = document.getElementById('mobile').value.trim();
-            const mobile2 = document.getElementById('mobile2').value.trim();
-            const mobile2Label = document.getElementById('mobile2Label').value.trim();
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const mobile = document.getElementById('mobile').value;
+            const mobile2 = document.getElementById('mobile2').value;
+            const mobile2Label = document.getElementById('mobile2Label').value;
             const dobFull = document.getElementById('dob').value;
             const rent = parseFloat(document.getElementById('rent').value);
             const moveInDate = document.getElementById('moveInDate').value;
             const hasAdvance = document.getElementById('hasAdvance').checked;
             const enableDocUpload = document.getElementById('enableDocUpload').checked;
-
-            // Validate mobile: must be exactly 10 digits
-            const mobileDigits = mobile.replace(/\D/g, '');
-            if (mobileDigits.length !== 10) {
-                showNotification('Mobile number must be exactly 10 digits (you entered ' + mobileDigits.length + ')', 'error');
-                return;
-            }
 
             // Calculate DOB password (DDMMYY)
             const dobDate = new Date(dobFull);
@@ -7799,7 +7830,7 @@ tr:nth-child(even) td{background:#f8faff;}
             return `You are Jarvis, the AI assistant for RentZen. ${now.toDateString()}. ${rooms.length} rooms(${occupied.length} occupied,${vacant.length} vacant). ThisMonth:₹${thisMonthPaid.toLocaleString()} collected,₹${totalPending.toLocaleString()} pending. Vacant:${vacant.map(r=>r.name).join(',')||'None'}.
 TENANTS:
 ${tenantLines||'None'}
-Rules: Keep replies SHORT and clear. Use <ACTION>{json}</ACTION> for changes. Read-only=just answer. ONE ACTION/reply. When info is missing, reply ONLY with a short bullet list of exactly what is needed — no extra text, no JSON examples. NEVER show raw action JSON or NAVIGATE/MONTHLY_RESET/APPLY_LATE_FEES strings in your reply text. ADD_TENANT: if user gives a full name like 'Angad Jat', split it — first word=firstName, rest=lastName. Mobile must be exactly 10 digits.
+Rules: 1 sentence reply + <ACTION>{json}</ACTION> for changes. Read-only=just answer. ONE ACTION/reply. Ask if info missing. ADD_TENANT needs firstName,lastName,mobile,rent,dob,moveInDate,roomName. You can navigate the app using NAVIGATE action.
 ACTIONS:
 UPDATE_RENT:{"type":"UPDATE_RENT","tenantName":"","amount":0}
 UPDATE_ELECTRICITY:{"type":"UPDATE_ELECTRICITY","tenantName":"","amount":0}
@@ -7849,7 +7880,7 @@ NAVIGATE:{"type":"NAVIGATE","tab":"rooms|records|approvals|revenue|reminders|ana
             const thinkId = 'ai-thinking-' + Date.now();
             messagesEl.innerHTML += `
                 <div id="${thinkId}" style="background:rgba(79,172,254,0.07);border:1px solid rgba(79,172,254,0.15);border-radius:10px;padding:12px;align-self:flex-start;max-width:85%;">
-                    <p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">JARVIS</p>
+                    <p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">🤖 Jarvis</p>
                     <p style="color:var(--text-muted);font-size:0.92em;"> Thinking...</p>
                 </div>`;
             messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -7868,7 +7899,7 @@ NAVIGATE:{"type":"NAVIGATE","tab":"rooms|records|approvals|revenue|reminders|ana
                 } catch(e) { /* offline fallback */ }
                 if (!GROQ_API_KEY) {
                     document.getElementById(thinkId)?.remove();
-                    messagesEl.innerHTML += `<div style="background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.3);border-radius:10px;padding:12px;align-self:flex-start;max-width:90%;"><p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">JARVIS</p><p style="color:var(--accent-rose);font-size:0.92em;">⚠️ Groq API key not found in Supabase.<br><span style="color:var(--text-secondary);font-size:0.88em;">Please add it to Supabase → <strong>kv_store</strong> table with key: <code>groq_api_key</code> and your Groq API key as the value.</span></p></div>`;
+                    messagesEl.innerHTML += `<div style="background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.3);border-radius:10px;padding:12px;align-self:flex-start;max-width:90%;"><p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">🤖 Jarvis</p><p style="color:var(--accent-rose);font-size:0.92em;">⚠️ Groq API key not found in Supabase.<br><span style="color:var(--text-secondary);font-size:0.88em;">Please add it to Supabase → <strong>kv_store</strong> table with key: <code>groq_api_key</code> and your Groq API key as the value.</span></p></div>`;
                     messagesEl.scrollTop = messagesEl.scrollHeight;
                     sendBtn.disabled = false; sendBtn.textContent = ' Send';
                     return;
@@ -7926,14 +7957,7 @@ NAVIGATE:{"type":"NAVIGATE","tab":"rooms|records|approvals|revenue|reminders|ana
                 // Replace thinking bubble with real response
                 const thinkEl = document.getElementById(thinkId);
                 if (thinkEl) {
-                    // Strip raw action JSON lines the AI sometimes leaks (NAVIGATE:{...} etc.)
-                    let cleanText = displayText
-                        .split('\n')
-                        .filter(line => !/^[A-Z_]+:\{/.test(line.trim()))
-                        .join('\n')
-                        .replace(/\n{3,}/g, '\n\n')
-                        .trim();
-                    let html = cleanText
+                    let html = displayText
                         .replace(/</g,'&lt;').replace(/>/g,'&gt;')
                         .replace(/\n/g,'<br>')
                         .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
@@ -8234,17 +8258,9 @@ NAVIGATE:{"type":"NAVIGATE","tab":"rooms|records|approvals|revenue|reminders|ana
 
             // ── ADD TENANT ────────────────────────────────────────────
             if (type === 'ADD_TENANT') {
-                // Auto-split full name if only firstName given (e.g. "Angad Jat")
-                if (json.firstName && !json.lastName && json.firstName.trim().includes(' ')) {
-                    const parts = json.firstName.trim().split(' ');
-                    json.firstName = parts[0];
-                    json.lastName = parts.slice(1).join(' ');
-                }
                 const missing = [];
-                if (!json.firstName || !json.lastName) missing.push('• Full name (first & last name)');
-                const mobileStr = String(json.mobile || '').replace(/\D/g, '');
-                if (!json.mobile) missing.push('• Mobile number (10 digits)');
-                else if (mobileStr.length !== 10) missing.push('• Mobile number must be exactly 10 digits (you provided ' + mobileStr.length + ')');
+                if (!json.firstName || !json.lastName) missing.push('• Full name (first name and last name separately)');
+                if (!json.mobile) missing.push('• Mobile number');
                 if (!json.rent || isNaN(json.rent) || Number(json.rent) <= 0) missing.push('• Monthly rent (₹)');
                 if (!json.dob) missing.push('• Date of birth in YYYY-MM-DD format (used to set login password, e.g. 2001-09-24)');
                 if (!json.moveInDate) missing.push('• Move-in date in YYYY-MM-DD format');
