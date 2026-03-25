@@ -40,7 +40,7 @@
     })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RentZen v32</title>
+    <title>RentZen</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -2196,7 +2196,7 @@
                 <div class="nav-tab" onclick="showTab('revenue')"> Revenue</div>
                 <div class="nav-tab" onclick="showTab('reminders')"> Reminders</div>
                 <div class="nav-tab" onclick="showTab('analytics')"> Analytics</div>
-                <div class="nav-tab" onclick="showTab('aichat')">🤖 Jarvis</div>
+                <div class="nav-tab" onclick="showTab('aichat')">JARVIS</div>
             </div>
 
             <!-- Active Rooms Tab -->
@@ -2383,20 +2383,20 @@
             <div id="aichatTab" class="tab-content" style="display: none;">
                 <div class="glass-card">
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
-                        <h3 style="color:var(--text-secondary);">🤖 Jarvis</h3>
+                        <h3 style="color:var(--text-secondary);">JARVIS</h3>
                         <span style="background:rgba(85,239,196,0.15);border:1px solid rgba(85,239,196,0.35);color:var(--accent-teal);padding:3px 10px;border-radius:12px;font-size:0.8em;font-weight:700;">Powered by Groq</span>
                     </div>
-                    <p style="color:var(--text-muted);font-size:0.88em;margin-bottom:18px;">Full admin control via chat — Jarvis can navigate the app, manage payments, update rents, manage rooms, monthly resets & more. Reads and writes your live data in real time.</p>
+                    <p style="color:var(--text-muted);font-size:0.88em;margin-bottom:18px;">Full admin control via chat — JARVIS can manage payments, update rents, manage rooms, monthly resets & more. Reads and writes your live data in real time.</p>
 
                     <div id="aiChatMessages" style="min-height:280px;max-height:420px;overflow-y:auto;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:14px;padding:16px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px;">
                         <div style="background:var(--bg-hover);border:1px solid rgba(79,172,254,0.2);border-radius:10px;padding:12px;align-self:flex-start;max-width:85%;">
-                            <p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">🤖 Jarvis</p>
-                            <p style="color:var(--text-primary);font-size:0.92em;">Hello! I'm <strong>Jarvis</strong>, your RentZen AI — I can <strong>read and write</strong> all your data and control the entire website.<br><br><strong style="color:#a78bfa;">📋 What I can do:</strong><br>• Record &amp; approve payments<br>• Update rent, electricity, pending<br>• Move tenants in/out, manage rooms<br>• Monthly reset with carry-forward<br>• Send WhatsApp reminders<br>• Revenue &amp; occupancy reports<br>• Navigate to any section of the app<br><br>Just type naturally — <em>"Mark Rahul paid ₹7000 via Cash"</em>, <em>"Show revenue tab"</em> or <em>"Add tenant Angad to Room3"</em></p>
+                            <p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">JARVIS</p>
+                            <p style="color:var(--text-primary);font-size:0.92em;">Hello! I'm <strong>JARVIS</strong>, your RentZen AI — I can <strong>read and write</strong> all your data and control the entire website.<br><br><strong style="color:#a78bfa;">📋 What I can do:</strong><br>• Record &amp; approve payments<br>• Update rent, electricity, pending<br>• Move tenants in/out, manage rooms<br>• Monthly reset with carry-forward<br>• Send WhatsApp reminders<br>• Revenue &amp; occupancy reports<br><br>Just type naturally — <em>"Mark Rahul paid ₹7000 via Cash"</em> or <em>"Add tenant Angad to Room3"</em></p>
                         </div>
                     </div>
 
                     <div style="display:flex;gap:10px;">
-                        <input type="text" id="aiChatInput" placeholder="Type anything: 'Mark Rahul paid ₹7000', 'Set electricity 650 for all', 'Monthly reset', 'Show pending'..." onkeydown="if(event.key==='Enter')sendAIMessage()"
+                        <input type="text" id="aiChatInput" placeholder="Type anything: 'Mark Rahul paid ₹7000', 'Set electricity 650 for all', 'Show pending'..." onkeydown="if(event.key==='Enter')sendAIMessage()"
                             style="flex:1;padding:12px 16px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:10px;color:#fff;font-size:0.95em;outline:none;">
                         <button class="btn btn-primary" onclick="sendAIMessage()" id="aiSendBtn" style="white-space:nowrap;"> Send</button>
                     </div>
@@ -2407,10 +2407,6 @@
                         <button onclick="quickAsk('Give me a full revenue summary')" style="padding:5px 12px;background:rgba(85,239,196,0.1);border:1px solid rgba(85,239,196,0.3);border-radius:20px;color:var(--accent-teal);cursor:pointer;font-size:0.82em;">Revenue summary</button>
                         <button onclick="quickAsk('Who has not paid this month?')" style="padding:5px 12px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);border-radius:20px;color:var(--accent-rose);cursor:pointer;font-size:0.82em;">Unpaid tenants</button>
                         <button onclick="quickAsk('Show all room and tenant status')" style="padding:5px 12px;background:var(--bg-hover);border:1px solid rgba(79,172,254,0.3);border-radius:20px;color:var(--accent-blue);cursor:pointer;font-size:0.82em;">All status</button>
-                        <button onclick="quickAsk('Set electricity bill to 700 for all tenants')" style="padding:5px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:20px;color:var(--accent-amber);cursor:pointer;font-size:0.82em;">⚡ Bulk electricity</button>
-                        <button onclick="quickAsk('Apply late fees of 100 to all overdue tenants')" style="padding:5px 12px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);border-radius:20px;color:var(--accent-rose);cursor:pointer;font-size:0.82em;">Apply late fees</button>
-
-                        <button onclick="quickAsk('Perform monthly reset — carry forward unpaid balances to new month')" style="padding:5px 12px;background:rgba(20,184,166,0.1);border:1px solid rgba(20,184,166,0.3);border-radius:20px;color:var(--accent-teal);cursor:pointer;font-size:0.82em;">Monthly reset</button>
                     </div>
                 </div>
             </div>
@@ -5526,6 +5522,8 @@ Generated on: ${new Date().toLocaleString()}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#222;}
 @media print{@page{margin:12mm 10mm;}}
 .header{background:linear-gradient(135deg,#0d1b3e 0%,#1a2d7a 60%,#2d46b9 100%);color:#fff;padding:24px 32px;display:flex;justify-content:space-between;align-items:center;}
+.brand-wrap{display:flex;align-items:center;gap:14px;}
+.brand-logo{width:52px;height:52px;border-radius:50%;object-fit:cover;box-shadow:0 0 14px rgba(162,155,254,.5);}
 .header-brand{font-size:1.9em;font-weight:900;letter-spacing:2px;}
 .header-sub{font-size:0.85em;opacity:0.75;margin-top:3px;}
 .header-right{text-align:right;font-size:0.8em;opacity:0.85;line-height:1.8;}
@@ -5545,10 +5543,13 @@ td{padding:9px 12px;border-bottom:1px solid #edf0f7;font-size:0.88em;}
 .watermark{text-align:center;margin-top:8px;font-size:0.65em;color:#ccc;letter-spacing:2px;}
 </style></head><body>
 <div class="header">
+<div class="brand-wrap">
+<img src="https://jvjjymuezpchchgfsvav.supabase.co/storage/v1/object/public/rentzen-images/Logo.png" class="brand-logo" alt="RentZen">
 <div>
 <div class="header-brand"><span style="color:#fff;">Rent</span><span style="color:#a29bfe;">Zen</span></div>
 <div class="header-sub">Property Management System</div>
 <div class="badge">TENANT PAYMENT RECORD</div>
+</div>
 </div>
 <div class="header-right">
 Tenant: ${tenant.name}<br>
@@ -7827,10 +7828,10 @@ tr:nth-child(even) td{background:#f8faff;}
                 return `${t.name}|${room.name}|R:₹${b.rent||0}|E:₹${b.electricityBill||0}|P:₹${b.pending||0}|Due:₹${computeTotalDue(room)}|Last:${lastPay?lastPay.date?.slice(0,10):'none'}|📱${t.mobile||'N/A'}`;
             }).join('\n');
 
-            return `You are Jarvis, the AI assistant for RentZen. ${now.toDateString()}. ${rooms.length} rooms(${occupied.length} occupied,${vacant.length} vacant). ThisMonth:₹${thisMonthPaid.toLocaleString()} collected,₹${totalPending.toLocaleString()} pending. Vacant:${vacant.map(r=>r.name).join(',')||'None'}.
+            return `You are JARVIS, the AI assistant for RentZen. ${now.toDateString()}. ${rooms.length} rooms(${occupied.length} occupied,${vacant.length} vacant). ThisMonth:₹${thisMonthPaid.toLocaleString()} collected,₹${totalPending.toLocaleString()} pending. Vacant:${vacant.map(r=>r.name).join(',')||'None'}.
 TENANTS:
 ${tenantLines||'None'}
-Rules: 1 sentence reply + <ACTION>{json}</ACTION> for changes. Read-only=just answer. ONE ACTION/reply. Ask if info missing. ADD_TENANT needs firstName,lastName,mobile,rent,dob,moveInDate,roomName. You can navigate the app using NAVIGATE action.
+Rules: 1 sentence reply + <ACTION>{json}</ACTION> for changes. Read-only=just answer. ONE ACTION/reply. Ask if info missing. ADD_TENANT needs firstName,lastName,mobile,rent,dob,moveInDate,roomName.
 ACTIONS:
 UPDATE_RENT:{"type":"UPDATE_RENT","tenantName":"","amount":0}
 UPDATE_ELECTRICITY:{"type":"UPDATE_ELECTRICITY","tenantName":"","amount":0}
@@ -7851,8 +7852,7 @@ SEND_REMINDER:{"type":"SEND_REMINDER","tenantName":""}
 RESERVE_ROOM:{"type":"RESERVE_ROOM","roomName":""}
 UNRESERVE_ROOM:{"type":"UNRESERVE_ROOM","roomName":""}
 SET_ROOM_RENT:{"type":"SET_ROOM_RENT","roomName":"","amount":0}
-APPLY_LATE_FEES:{"type":"APPLY_LATE_FEES"}
-NAVIGATE:{"type":"NAVIGATE","tab":"rooms|records|approvals|revenue|reminders|analytics|aichat"}`;
+APPLY_LATE_FEES:{"type":"APPLY_LATE_FEES"}`;
         }
 
         async function sendAIMessage() {
@@ -7880,7 +7880,7 @@ NAVIGATE:{"type":"NAVIGATE","tab":"rooms|records|approvals|revenue|reminders|ana
             const thinkId = 'ai-thinking-' + Date.now();
             messagesEl.innerHTML += `
                 <div id="${thinkId}" style="background:rgba(79,172,254,0.07);border:1px solid rgba(79,172,254,0.15);border-radius:10px;padding:12px;align-self:flex-start;max-width:85%;">
-                    <p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">🤖 Jarvis</p>
+                    <p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">JARVIS</p>
                     <p style="color:var(--text-muted);font-size:0.92em;"> Thinking...</p>
                 </div>`;
             messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -7899,7 +7899,7 @@ NAVIGATE:{"type":"NAVIGATE","tab":"rooms|records|approvals|revenue|reminders|ana
                 } catch(e) { /* offline fallback */ }
                 if (!GROQ_API_KEY) {
                     document.getElementById(thinkId)?.remove();
-                    messagesEl.innerHTML += `<div style="background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.3);border-radius:10px;padding:12px;align-self:flex-start;max-width:90%;"><p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">🤖 Jarvis</p><p style="color:var(--accent-rose);font-size:0.92em;">⚠️ Groq API key not found in Supabase.<br><span style="color:var(--text-secondary);font-size:0.88em;">Please add it to Supabase → <strong>kv_store</strong> table with key: <code>groq_api_key</code> and your Groq API key as the value.</span></p></div>`;
+                    messagesEl.innerHTML += `<div style="background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.3);border-radius:10px;padding:12px;align-self:flex-start;max-width:90%;"><p style="color:var(--accent-teal);font-size:0.82em;font-weight:700;margin-bottom:4px;">JARVIS</p><p style="color:var(--accent-rose);font-size:0.92em;">⚠️ Groq API key not found in Supabase.<br><span style="color:var(--text-secondary);font-size:0.88em;">Please add it to Supabase → <strong>kv_store</strong> table with key: <code>groq_api_key</code> and your Groq API key as the value.</span></p></div>`;
                     messagesEl.scrollTop = messagesEl.scrollHeight;
                     sendBtn.disabled = false; sendBtn.textContent = ' Send';
                     return;
@@ -8358,16 +8358,6 @@ NAVIGATE:{"type":"NAVIGATE","tab":"rooms|records|approvals|revenue|reminders|ana
                 if (occupied.length === 0) return `❌ No occupied rooms found to reset.`;
                 performMonthlyUpdate();
                 return `✅ Monthly reset performed for ${occupied.length} occupied room(s). Unpaid balances carried forward.`;
-            }
-
-            // ── NAVIGATE TO TAB ───────────────────────────────────────
-            if (type === 'NAVIGATE') {
-                const validTabs = ['rooms','records','approvals','revenue','reminders','analytics','aichat'];
-                const tab = (json.tab || '').toLowerCase().trim();
-                if (!tab || !validTabs.includes(tab)) return `❌ Unknown section "${json.tab}".\nAvailable: ${validTabs.join(', ')}`;
-                showTab(tab);
-                const tabLabels = { rooms:'Active Rooms', records:'Records', approvals:'Approvals', revenue:'Revenue', reminders:'Reminders', analytics:'Analytics', aichat:'AI Chat' };
-                return `✅ Navigated to the ${tabLabels[tab]} section.`;
             }
 
             return `⚠️ Unknown action type: ${type}`;
