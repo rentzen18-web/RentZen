@@ -202,6 +202,7 @@
         .sync-dot.error   { background: var(--accent-rose);  box-shadow: 0 0 6px rgba(244,63,94,0.7); }
         .sync-dot.offline { background: var(--text-muted); box-shadow: none; }
         @keyframes syncPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.5); } }
+        @keyframes slideInRight { from { transform: translateX(120%); opacity:0; } to { transform: translateX(0); opacity:1; } }
         .sync-status-text { color: var(--text-secondary); font-weight: 500; }
         .sync-time { color: var(--text-muted); }
         .sync-btn-mini {
@@ -3114,6 +3115,8 @@
                     if (sess.type === 'admin') {
                         currentUser = sess;
                         showDashboard('admin');
+                        // Restore the 30-min timeout from the original login time
+                        startAdminSessionTimer();
                     } else if (sess.type === 'tenant' && sess.roomId) {
                         const room = rooms.find(r => r.id === sess.roomId);
                         if (room && room.tenant) {
@@ -3368,6 +3371,9 @@
                 currentUser = { type: 'admin', username };
                 // Persist session per-tab so multiple tabs/devices can be logged in
                 sessionStorage.setItem('galaxy:session', JSON.stringify(currentUser));
+                // Record admin login time for 30-min auto-logout
+                sessionStorage.setItem('galaxy:adminLoginTime', Date.now().toString());
+                startAdminSessionTimer();
                 
                 // Record login history
                 notifications.push({
@@ -3435,9 +3441,10 @@
 
         function logout() {
             // Record logout time            }
-            
+            stopAdminSessionTimer();
             currentUser = null;
             sessionStorage.removeItem('galaxy:session');
+            sessionStorage.removeItem('galaxy:adminLoginTime');
             document.getElementById('adminDashboard').classList.remove('active');
             document.getElementById('tenantDashboard').classList.remove('active');
             document.getElementById('loginScreen').style.display = 'flex';
@@ -3446,6 +3453,127 @@
             document.body.classList.remove('dashboard-active');
             showNotification('Logged out successfully', 'info');
             saveData();
+        }
+
+        // ============================================================
+        // ADMIN SESSION TIMEOUT — 30-minute auto-logout
+        // ============================================================
+        var _adminSessionTimer       = null;
+        var _adminWarnTimer          = null;
+        var _adminSessionToastShown  = false;
+        var _adminSessionToastEl     = null;
+        var ADMIN_SESSION_MS         = 30 * 60 * 1000;   // 30 minutes
+        var ADMIN_WARN_BEFORE_MS     = 2  * 60 * 1000;   // warn 2 min before
+
+        function startAdminSessionTimer() {
+            stopAdminSessionTimer();
+            _adminSessionToastShown = false;
+            var loginTime = parseInt(sessionStorage.getItem('galaxy:adminLoginTime') || Date.now());
+            var elapsed   = Date.now() - loginTime;
+            var remaining = ADMIN_SESSION_MS - elapsed;
+            if (remaining <= 0) { _forceAdminLogout(); return; }
+
+            var warnIn = remaining - ADMIN_WARN_BEFORE_MS;
+            if (warnIn > 0) {
+                _adminWarnTimer = setTimeout(function() {
+                    _showAdminSessionWarning(Math.ceil(ADMIN_WARN_BEFORE_MS / 60000));
+                }, warnIn);
+            } else {
+                _showAdminSessionWarning(Math.ceil(remaining / 60000));
+            }
+            _adminSessionTimer = setTimeout(function() {
+                _forceAdminLogout();
+            }, remaining);
+
+            // Update countdown badge in sync bar every second while logged in
+            _updateAdminCountdown(remaining);
+        }
+
+        function stopAdminSessionTimer() {
+            clearTimeout(_adminSessionTimer);
+            clearTimeout(_adminWarnTimer);
+            _adminSessionTimer = null;
+            _adminWarnTimer    = null;
+            _removeAdminSessionToast();
+            var badge = document.getElementById('adminSessionBadge');
+            if (badge) badge.remove();
+        }
+
+        function _updateAdminCountdown(remaining) {
+            if (!currentUser || currentUser.type !== 'admin') return;
+            var badge = document.getElementById('adminSessionBadge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.id = 'adminSessionBadge';
+                badge.style.cssText = 'display:flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:0.76em;font-weight:600;color:var(--accent-amber);background:var(--accent-amber-dim);border:1px solid rgba(245,158,11,0.25);cursor:default;';
+                var syncRight = document.querySelector('.sync-bar .sync-right') || document.querySelector('.sync-bar');
+                if (syncRight) syncRight.insertAdjacentElement('afterbegin', badge);
+            }
+            var mins = Math.floor(remaining / 60000);
+            var secs = Math.floor((remaining % 60000) / 1000);
+            badge.textContent = '⏱ Session: ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+            if (remaining <= ADMIN_WARN_BEFORE_MS) badge.style.color = 'var(--accent-rose)';
+            if (remaining > 0) setTimeout(function() { _updateAdminCountdown(remaining - 1000); }, 1000);
+        }
+
+        function _showAdminSessionWarning(minsLeft) {
+            if (_adminSessionToastShown) return;
+            _adminSessionToastShown = true;
+            var toast = document.createElement('div');
+            toast.id = 'adminSessionToast';
+            toast.style.cssText = [
+                'position:fixed;bottom:48px;right:20px;z-index:9999;',
+                'background:#1c1c28;border:1px solid rgba(244,63,94,0.5);',
+                'border-radius:12px;padding:16px 20px;min-width:300px;max-width:360px;',
+                'box-shadow:0 8px 32px rgba(244,63,94,0.2);',
+                'animation:slideInRight 0.35s cubic-bezier(0.16,1,0.3,1) both;',
+                'font-family:\'Geist\',sans-serif;'
+            ].join('');
+            toast.innerHTML = [
+                '<div style="display:flex;align-items:flex-start;gap:12px;">',
+                '  <span style="font-size:1.5em;flex-shrink:0;">⏰</span>',
+                '  <div>',
+                '    <div style="color:#f43f5e;font-weight:700;font-size:0.95em;margin-bottom:4px;">Session Expiring Soon</div>',
+                '    <div style="color:#8b8ba0;font-size:0.82em;line-height:1.5;">Your admin session will automatically log out in <strong style="color:#f0f0f5;">' + minsLeft + ' minute' + (minsLeft !== 1 ? 's' : '') + '</strong>.</div>',
+                '    <div style="display:flex;gap:8px;margin-top:10px;">',
+                '      <button onclick="extendAdminSession()" style="padding:5px 14px;background:var(--accent-purple);color:#fff;border:none;border-radius:7px;font-size:0.82em;font-weight:600;cursor:pointer;font-family:\'Geist\',sans-serif;">Extend +30 min</button>',
+                '      <button onclick="logout()" style="padding:5px 14px;background:transparent;color:#f43f5e;border:1px solid rgba(244,63,94,0.35);border-radius:7px;font-size:0.82em;font-weight:600;cursor:pointer;font-family:\'Geist\',sans-serif;">Logout Now</button>',
+                '    </div>',
+                '  </div>',
+                '</div>'
+            ].join('');
+            document.body.appendChild(toast);
+            _adminSessionToastEl = toast;
+        }
+
+        function _removeAdminSessionToast() {
+            var t = document.getElementById('adminSessionToast');
+            if (t) t.remove();
+            _adminSessionToastEl = null;
+            _adminSessionToastShown = false;
+        }
+
+        function extendAdminSession() {
+            _removeAdminSessionToast();
+            sessionStorage.setItem('galaxy:adminLoginTime', Date.now().toString());
+            startAdminSessionTimer();
+            showNotification(' Session extended by 30 minutes.', 'success');
+        }
+
+        function _forceAdminLogout() {
+            _removeAdminSessionToast();
+            // Show a brief modal before logging out
+            var overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(8,8,14,0.97);display:flex;align-items:center;justify-content:center;';
+            overlay.innerHTML = [
+                '<div style="background:#16161f;border:1px solid rgba(244,63,94,0.4);border-radius:18px;padding:40px 48px;text-align:center;max-width:400px;font-family:\'Geist\',sans-serif;">',
+                '  <div style="font-size:3em;margin-bottom:16px;">🔒</div>',
+                '  <div style="color:#f0f0f5;font-size:1.15em;font-weight:700;margin-bottom:8px;">Session Expired</div>',
+                '  <div style="color:#8b8ba0;font-size:0.88em;margin-bottom:24px;">Your 30-minute admin session has ended.<br>Please log in again to continue.</div>',
+                '  <button onclick="this.closest(\'div[style]\').remove();logout();" style="padding:9px 28px;background:var(--accent-purple);color:#fff;border:none;border-radius:9px;font-size:0.9em;font-weight:600;cursor:pointer;font-family:\'Geist\',sans-serif;">OK, Take me to Login</button>',
+                '</div>'
+            ].join('');
+            document.body.appendChild(overlay);
         }
 
         // ============================================================
