@@ -2541,10 +2541,19 @@
                     },
                     body: body ? JSON.stringify(body) : undefined
                 });
-                if (!res.ok) { _sbDisable('HTTP ' + res.status); return method === 'GET' ? [] : null; }
+                if (!res.ok) {
+                    // Only fully disable on auth errors (401/403) - not on table/data errors
+                    if (res.status === 401 || res.status === 403) {
+                        _sbDisable('HTTP ' + res.status);
+                    }
+                    return method === 'GET' ? [] : null;
+                }
                 return res.json();
             } catch(e) {
-                _sbDisable('fetch failed');
+                // Only disable on network failure (no internet), not on API errors
+                if (e instanceof TypeError && e.message.includes('fetch')) {
+                    _sbDisable('fetch failed');
+                }
                 return method === 'GET' ? [] : null;
             }
         }
@@ -3090,14 +3099,13 @@
         async function init() {
             deviceId = getDeviceId();
             createStars();
+
+            // loadData now returns instantly (local data) and syncs cloud in background
             await loadData();
 
             checkMonthlyUpdate();
             checkSupabaseSetup();
-            if (dbAvailable) {
-                startPolling();
-                startPresenceHeartbeat();
-            }
+
             // -- Restore session (survives page refresh within same tab) --
             try {
                 const savedSession = sessionStorage.getItem('galaxy:session');
@@ -3115,6 +3123,8 @@
                     }
                 }
             } catch(e) { /* no saved session */ }
+            // Note: startPolling and startPresenceHeartbeat are now called inside
+            // _backgroundCloudSync() once Supabase availability is confirmed.
         }
 
         // Create stars
@@ -3156,40 +3166,64 @@
         }
 
         // ============================================================
-        //  LOAD DATA (Cloud-first, localStorage fallback)
+        //  LOAD DATA — instant local load, background cloud sync
         // ============================================================
         async function loadData() {
             const overlay = document.getElementById('dbLoadingOverlay');
-            overlay.classList.remove('hidden');
 
-            dbAvailable = await checkDbAvailability();
+            // STEP 1: Load from localStorage instantly (no network wait)
+            loadFromLocalStorage();
+            _rebuildPaymentsIndex();
+
+            // STEP 2: Hide overlay immediately so login shows at once
+            overlay.classList.add('hidden');
+
+            // STEP 3: Sync with Supabase silently in the background
+            _backgroundCloudSync();
+        }
+
+        async function _backgroundCloudSync() {
+            setSyncState('syncing', 'Connecting...');
+            try {
+                dbAvailable = await checkDbAvailability();
+            } catch(e) {
+                dbAvailable = false;
+            }
 
             if (dbAvailable) {
-                setSyncState('syncing', 'Connecting...');
-                document.getElementById('dbLoadingSubText').textContent = 'Checking cloud database...';
-                await migrateFromLocalStorage();
-                document.getElementById('dbLoadingSubText').textContent = 'Loading cloud data...';
-
                 try {
-                    rooms            = (await dbGet(DB_KEYS.rooms))    || null;
-                    inactiveTenants  = (await dbGet(DB_KEYS.inactive)) || [];
-                    payments         = (await dbGet(DB_KEYS.payments)) || [];
-                    pendingApprovals = (await dbGet(DB_KEYS.approvals))|| [];
-                    notifications    = (await dbGet(DB_KEYS.notifications)) || [];
-    
-                    if (!rooms) rooms = initializeDefaultRooms();
+                    await migrateFromLocalStorage();
+
+                    const [cloudRooms, cloudInactive, cloudPayments, cloudApprovals, cloudNotifs] = await Promise.all([
+                        dbGet(DB_KEYS.rooms),
+                        dbGet(DB_KEYS.inactive),
+                        dbGet(DB_KEYS.payments),
+                        dbGet(DB_KEYS.approvals),
+                        dbGet(DB_KEYS.notifications)
+                    ]);
+
+                    rooms            = cloudRooms     || rooms            || initializeDefaultRooms();
+                    inactiveTenants  = cloudInactive  || inactiveTenants  || [];
+                    payments         = cloudPayments  || payments         || [];
+                    pendingApprovals = cloudApprovals || pendingApprovals || [];
+                    notifications    = cloudNotifs    || notifications    || [];
 
                     lastKnownFingerprint = buildStateFingerprint();
                     lastSyncTime = Date.now();
                     setSyncState('connected', 'Cloud Synced');
-                    showNotification(' Connected to cloud database', 'success');
+                    persistToLocalStorage();
+                    _rebuildPaymentsIndex();
+
+                    // Refresh dashboard silently if already logged in
+                    if (currentUser && currentUser.type === 'admin')       renderAdminDashboard();
+                    else if (currentUser && currentUser.type === 'tenant') renderTenantDashboard();
+
+                    startPolling();
+                    startPresenceHeartbeat();
                 } catch(e) {
-                    loadFromLocalStorage();
                     setSyncState('error', 'Cloud Error - Using Local');
-                    showNotification(' Cloud error - using local data', 'error');
                 }
             } else {
-                loadFromLocalStorage();
                 setSyncState('offline', 'Offline Mode');
                 const badge = document.querySelector('.db-badge');
                 if (badge) {
@@ -3197,10 +3231,6 @@
                     badge.style.cssText += 'background:rgba(100,100,120,0.12);border-color:rgba(100,100,120,0.3);color:var(--text-muted);';
                 }
             }
-
-            overlay.classList.add('hidden');
-            persistToLocalStorage();
-            _rebuildPaymentsIndex();
         }
 
         function loadFromLocalStorage() {
@@ -3228,6 +3258,7 @@
         function saveData() {
             persistToLocalStorage();                    // immediate local backup
             _rebuildPaymentsIndex();                     // keep lookup index current
+            _aiChatHistory = [];                         // reset Jarvis context on data change
             if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
             saveDebounceTimer = setTimeout(() => {
                 if (dbAvailable) cloudSave();
@@ -4476,12 +4507,18 @@
             tenant.password = password;
             tenant.moveInDate = moveInDate;
             tenant.docUploadEnabled = enableDocUpload;
-            tenant.monthlyBilling = tenant.monthlyBilling || {
-                pending: 0,
-                rent: rent,
-                electricityBill: 0,
-                totalDue: rent
-            };
+            // Always update monthlyBilling (preserve existing electricity/pending, update rent)
+            if (tenant.monthlyBilling) {
+                tenant.monthlyBilling.rent = rent;
+                tenant.monthlyBilling.totalDue = rent + (tenant.monthlyBilling.electricityBill || 0) + (tenant.monthlyBilling.pending || 0);
+            } else {
+                tenant.monthlyBilling = {
+                    pending: 0,
+                    rent: rent,
+                    electricityBill: 0,
+                    totalDue: rent
+                };
+            }
 
             // Support multiple advance payments per tenant
             if (hasAdvance) {
@@ -4565,14 +4602,30 @@
         }
 
         function finalizeTenantSave(room, tenant, rent, password) {
+            const isNewTenant = !room.tenant || room.tenant.id !== tenant.id;
+
             room.tenant = tenant;
             room.status = 'occupied';
             room.rent = rent;
 
+            // Always ensure rent is synced in monthlyBilling
+            if (room.tenant.monthlyBilling) {
+                room.tenant.monthlyBilling.rent = rent;
+            }
+
+            // For brand-new tenants, guarantee pending/electricity start at zero
+            if (isNewTenant && room.tenant.monthlyBilling) {
+                room.tenant.monthlyBilling.pending = 0;
+                room.tenant.monthlyBilling.electricityBill = 0;
+                room.tenant.monthlyBilling.lateFee = 0;
+                room.tenant.monthlyBilling.lateFeeApplied = false;
+                room.tenant.monthlyBilling.totalDue = rent;
+            }
+
             saveData();
             closeModal();
             renderAdminDashboard();
-            showNotification(`Tenant added! Username: ${room.name}, Password: ${password}`, 'success');
+            showNotification(`Tenant saved! Username: ${room.name}, Password: ${password}`, 'success');
         }
 
         function getNextMonth(dateStr) {
@@ -5338,8 +5391,15 @@
                 const billing = room.tenant.monthlyBilling;
                 if (!billing) return;
 
-                // 1. Snapshot unpaid balance from closing month
-                const carryForward = computeTotalDue(room);
+                // Only carry forward pending for tenants who moved in BEFORE this month
+                // If tenant moved in this month, they start fresh (no carry-forward)
+                const moveIn = room.tenant.moveInDate ? new Date(room.tenant.moveInDate) : null;
+                const tenantIsNewThisMonth = moveIn &&
+                    moveIn.getFullYear() === today.getFullYear() &&
+                    moveIn.getMonth() === today.getMonth();
+
+                // 1. Snapshot unpaid balance from closing month (only for existing tenants)
+                const carryForward = tenantIsNewThisMonth ? 0 : computeTotalDue(room);
 
                 // 2. Update billing fields for the new month
                 billing.pending        = carryForward > 0 ? carryForward : 0;
@@ -7831,7 +7891,7 @@ tr:nth-child(even) td{background:#f8faff;}
             return `You are JARVIS, the AI assistant for RentZen. ${now.toDateString()}. ${rooms.length} rooms(${occupied.length} occupied,${vacant.length} vacant). ThisMonth:₹${thisMonthPaid.toLocaleString()} collected,₹${totalPending.toLocaleString()} pending. Vacant:${vacant.map(r=>r.name).join(',')||'None'}.
 TENANTS:
 ${tenantLines||'None'}
-Rules: NEVER output raw data, JSON, or system context in your reply. 1-2 sentence plain-English reply only, then <ACTION>{json}</ACTION> if a change is needed. Read-only queries = just answer clearly. ONE ACTION per reply. Ask if info is missing. ADD_TENANT needs firstName,lastName,mobile,rent,dob,moveInDate,roomName.
+Rules: NEVER output raw data, JSON, or system context in your reply. NEVER use markdown code blocks (no backtick fences). 1-2 sentence plain-English reply only, then <ACTION>{json}</ACTION> if a change is needed. Read-only queries = just answer clearly. ONE ACTION per reply. Ask if info is missing. ADD_TENANT needs firstName,lastName,mobile,rent,dob,moveInDate,roomName.
 ACTIONS:
 UPDATE_RENT:{"type":"UPDATE_RENT","tenantName":"","amount":0}
 UPDATE_ELECTRICITY:{"type":"UPDATE_ELECTRICITY","tenantName":"","amount":0}
@@ -7936,7 +7996,9 @@ APPLY_LATE_FEES:{"type":"APPLY_LATE_FEES"}`;
                     throw new Error(errData?.error?.message || `HTTP ${groqResponse.status}`);
                 }
                 const data = await groqResponse.json();
-                const rawAiText = data?.choices?.[0]?.message?.content || 'Sorry, I could not process that request.';
+                let rawAiText = data?.choices?.[0]?.message?.content || 'Sorry, I could not process that request.';
+                // Strip markdown code fences (e.g. ```json ... ``` or ``` ... ```)
+                rawAiText = rawAiText.replace(/```[\w]*\n?/g, '').replace(/```/g, '');
 
                 // Parse and execute any <ACTION> blocks
                 let actionResult = null;
