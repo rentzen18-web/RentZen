@@ -2585,7 +2585,11 @@
         if (_sbEnabled && !window._sbJsLoadFailed && window.supabase) {
             try {
                 _supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-                    realtime: { params: { eventsPerSecond: 2 } }
+                    realtime: { params: { eventsPerSecond: 2 } },
+                    auth: {
+                        site: window.location.origin,
+                        redirectTo: window.location.origin + window.location.pathname
+                    }
                 });
                 window._sbClient = _supabaseClient;
             } catch(e) {
