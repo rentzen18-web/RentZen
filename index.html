@@ -2585,11 +2585,7 @@
         if (_sbEnabled && !window._sbJsLoadFailed && window.supabase) {
             try {
                 _supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-                    realtime: { params: { eventsPerSecond: 2 } },
-                    auth: {
-                        site: window.location.origin,
-                        redirectTo: window.location.origin + window.location.pathname
-                    }
+                    realtime: { params: { eventsPerSecond: 2 } }
                 });
                 window._sbClient = _supabaseClient;
             } catch(e) {
@@ -3102,6 +3098,10 @@
 
 
         async function init() {
+            // Hide loading overlay immediately — no waiting for network
+            const _overlay = document.getElementById('dbLoadingOverlay');
+            if (_overlay) _overlay.classList.add('hidden');
+
             deviceId = getDeviceId();
             createStars();
 
@@ -3748,7 +3748,7 @@
                         <div class="card-actions">
                             ${room.status === 'occupied' ? `
                                 <button class="btn btn-warning" onclick="openElectricityModal('${room.id}')"> Bill</button>
-                                <button class="btn btn-primary" onclick="openTenantModal('${room.id}')"> Edit</button>
+                                <button class="btn btn-primary" onclick="openEditTenantPanel('${room.id}')"> Edit</button>
                                 <button class="btn btn-success" onclick="openVacantPaymentModal('${room.id}')"> Payment</button>
                                 <button class="btn btn-danger" onclick="markVacant('${room.id}')"> Vacant</button>
                             ` : `
@@ -4446,6 +4446,156 @@
             saveData();
             renderAdminDashboard();
             showNotification('Room removed', 'success');
+        }
+
+        // ============================================================
+        //  SIMPLE INLINE EDIT TENANT PANEL
+        //  Opens a clean, focused modal to edit existing tenant info.
+        //  Once saved it closes and re-renders — no cluttered form.
+        // ============================================================
+        function openEditTenantPanel(roomId) {
+            const room = rooms.find(r => r.id === roomId);
+            if (!room || !room.tenant) { showNotification('Tenant not found', 'error'); return; }
+            const t = room.tenant;
+
+            const modal = `
+                <div class="modal active" id="editTenantModal">
+                    <div class="modal-content" style="max-width:520px;">
+                        <div class="modal-header">
+                            <h2 class="modal-title"> Edit Tenant — ${escapeHtml(room.name)}</h2>
+                            <button class="close-btn" onclick="closeModal()">&times;</button>
+                        </div>
+
+                        <!-- View mode: shown after save -->
+                        <div id="etViewMode" style="display:none;">
+                            <div style="display:grid;gap:10px;padding:4px 0 16px;">
+                                <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value" id="etv_name"></span></div>
+                                <div class="detail-row"><span class="detail-label">Mobile</span><span class="detail-value" id="etv_mobile"></span></div>
+                                <div class="detail-row"><span class="detail-label">Alt. Mobile</span><span class="detail-value" id="etv_mobile2"></span></div>
+                                <div class="detail-row"><span class="detail-label">Monthly Rent</span><span class="detail-value" id="etv_rent"></span></div>
+                                <div class="detail-row"><span class="detail-label">Move-in Date</span><span class="detail-value" id="etv_movein"></span></div>
+                                <div class="detail-row"><span class="detail-label">Date of Birth</span><span class="detail-value" id="etv_dob"></span></div>
+                            </div>
+                            <div style="display:flex;gap:10px;margin-top:4px;">
+                                <button class="btn btn-primary" style="flex:1;" onclick="switchToEditMode()"> Edit Again</button>
+                                <button class="btn" style="flex:1;background:var(--bg-hover);border:1px solid var(--border-default);color:var(--text-primary);" onclick="closeModal()">Close</button>
+                            </div>
+                        </div>
+
+                        <!-- Edit mode: shown initially -->
+                        <div id="etEditMode">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>First Name</label>
+                                    <input type="text" id="et_firstName" value="${escapeHtml(t.firstName || '')}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Last Name</label>
+                                    <input type="text" id="et_lastName" value="${escapeHtml(t.lastName || '')}" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Mobile Number</label>
+                                    <input type="tel" id="et_mobile" value="${escapeHtml(t.mobile || '')}" pattern="[0-9]{10}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt. Mobile <span style="color:var(--text-muted);font-size:0.85em;">(optional)</span></label>
+                                    <input type="tel" id="et_mobile2" value="${escapeHtml(t.mobile2 || '')}" pattern="[0-9]{10}">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Monthly Rent (₹)</label>
+                                    <input type="number" id="et_rent" value="${room.rent || 0}" min="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Move-in Date</label>
+                                    <input type="date" id="et_moveIn" value="${t.moveInDate || ''}">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Date of Birth</label>
+                                    <input type="date" id="et_dob" value="${t.dobFull || ''}">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alt. Mobile Label</label>
+                                    <input type="text" id="et_mobile2Label" value="${escapeHtml(t.mobile2Label || '')}" placeholder="e.g. Father, Brother...">
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:10px;margin-top:16px;">
+                                <button class="btn btn-primary" style="flex:1;" onclick="saveEditTenantPanel('${roomId}')"> Save Changes</button>
+                                <button class="btn" style="flex:1;background:var(--bg-hover);border:1px solid var(--border-default);color:var(--text-primary);" onclick="closeModal()">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+            document.getElementById('modalContainer').innerHTML = modal;
+        }
+
+        function saveEditTenantPanel(roomId) {
+            const room = rooms.find(r => r.id === roomId);
+            if (!room || !room.tenant) { showNotification('Room not found', 'error'); return; }
+
+            const firstName = document.getElementById('et_firstName').value.trim();
+            const lastName  = document.getElementById('et_lastName').value.trim();
+            const mobile    = document.getElementById('et_mobile').value.trim();
+            const mobile2   = document.getElementById('et_mobile2').value.trim();
+            const mobile2Label = document.getElementById('et_mobile2Label').value.trim();
+            const rent      = parseFloat(document.getElementById('et_rent').value);
+            const moveInDate = document.getElementById('et_moveIn').value;
+            const dobFull   = document.getElementById('et_dob').value;
+
+            if (!firstName || !lastName || !mobile) {
+                showNotification('Please fill in all required fields', 'error'); return;
+            }
+
+            // Recalculate password from DOB
+            let password = room.tenant.password;
+            if (dobFull) {
+                const dobDate = new Date(dobFull);
+                password = String(dobDate.getDate()).padStart(2,'0') +
+                           String(dobDate.getMonth()+1).padStart(2,'0') +
+                           String(dobDate.getFullYear()).slice(-2);
+            }
+
+            const tenant = room.tenant;
+            tenant.firstName   = firstName;
+            tenant.lastName    = lastName;
+            tenant.name        = `${firstName} ${lastName}`;
+            tenant.mobile      = mobile;
+            tenant.mobile2     = mobile2;
+            tenant.mobile2Label = mobile2Label;
+            tenant.dobFull     = dobFull;
+            tenant.password    = password;
+            tenant.moveInDate  = moveInDate;
+            room.rent          = rent;
+            if (tenant.monthlyBilling) {
+                tenant.monthlyBilling.rent    = rent;
+                tenant.monthlyBilling.totalDue = rent + (tenant.monthlyBilling.electricityBill || 0) + (tenant.monthlyBilling.pending || 0);
+            }
+
+            saveData();
+            renderAdminDashboard();
+            showNotification(`${tenant.name} updated successfully!`, 'success');
+
+            // Switch to view mode inside the same modal
+            document.getElementById('etEditMode').style.display = 'none';
+            const vm = document.getElementById('etViewMode');
+            vm.style.display = 'block';
+            document.getElementById('etv_name').textContent   = tenant.name;
+            document.getElementById('etv_mobile').textContent = tenant.mobile;
+            document.getElementById('etv_mobile2').textContent = tenant.mobile2 ? `${tenant.mobile2} (${tenant.mobile2Label || 'Alt'})` : '—';
+            document.getElementById('etv_rent').textContent   = `₹${rent.toLocaleString()}`;
+            document.getElementById('etv_movein').textContent = moveInDate || '—';
+            document.getElementById('etv_dob').textContent    = dobFull || '—';
+        }
+
+        function switchToEditMode() {
+            document.getElementById('etViewMode').style.display  = 'none';
+            document.getElementById('etEditMode').style.display  = 'block';
         }
 
         // Tenant management — add/edit tenants and handle document uploads
@@ -8005,46 +8155,20 @@ tr:nth-child(even) td{background:#f8faff;}
         let _aiChatHistory = [];
 
         function buildDataContext() {
-            const occupied = rooms.filter(r => r.status === 'occupied' && r.tenant);
-            const vacant   = rooms.filter(r => r.status === 'vacant');
-            const now      = new Date();
-            const totalPending = occupied.reduce((s,r) => s + computeTotalDue(r), 0);
-            const thisMonthPaid = payments
-                .filter(p => p.status==='approved' && new Date(p.date).getMonth()===now.getMonth() && new Date(p.date).getFullYear()===now.getFullYear())
-                .reduce((s,p) => s+(p.paidAmount||p.amount||0), 0);
-
-            const tenantLines = occupied.map(room => {
-                const t = room.tenant;
-                const b = t.monthlyBilling || {};
-                const lastPay = payments.filter(p=>p.tenantId===t.id&&p.status==='approved').sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
-                return `${t.name}|${room.name}|R:₹${b.rent||0}|E:₹${b.electricityBill||0}|P:₹${b.pending||0}|Due:₹${computeTotalDue(room)}|Last:${lastPay?lastPay.date?.slice(0,10):'none'}|📱${t.mobile||'N/A'}`;
-            }).join('\n');
-
-            return `You are JARVIS, the AI assistant for RentZen. ${now.toDateString()}. ${rooms.length} rooms(${occupied.length} occupied,${vacant.length} vacant). ThisMonth:₹${thisMonthPaid.toLocaleString()} collected,₹${totalPending.toLocaleString()} pending. Vacant:${vacant.map(r=>r.name).join(',')||'None'}.
-TENANTS:
-${tenantLines||'None'}
-Rules: NEVER output raw data, JSON, or system context in your reply. NEVER use markdown code blocks (no backtick fences). 1-2 sentence plain-English reply only, then <ACTION>{json}</ACTION> if a change is needed. Read-only queries = just answer clearly. ONE ACTION per reply. Ask if info is missing. ADD_TENANT needs firstName,lastName,mobile,rent,dob,moveInDate,roomName.
-ACTIONS:
-UPDATE_RENT:{"type":"UPDATE_RENT","tenantName":"","amount":0}
-UPDATE_ELECTRICITY:{"type":"UPDATE_ELECTRICITY","tenantName":"","amount":0}
-BATCH_ELECTRICITY:{"type":"BATCH_ELECTRICITY","amount":0}
-BATCH_RENT:{"type":"BATCH_RENT","amount":0}
-UPDATE_PENDING:{"type":"UPDATE_PENDING","tenantName":"","amount":0}
-MARK_PAID:{"type":"MARK_PAID","tenantName":"","amount":0,"method":"UPI","notes":""}
-APPROVE_PAYMENT:{"type":"APPROVE_PAYMENT","tenantName":""}
-REJECT_PAYMENT:{"type":"REJECT_PAYMENT","tenantName":"","reason":""}
-ADD_ROOM:{"type":"ADD_ROOM","roomName":"","rent":0}
-REMOVE_ROOM:{"type":"REMOVE_ROOM","roomName":""}
-ADD_TENANT:{"type":"ADD_TENANT","firstName":"","lastName":"","mobile":"","rent":0,"dob":"YYYY-MM-DD","moveInDate":"YYYY-MM-DD","roomName":"","electricity":0,"pending":0,"mobile2":""}
-MARK_VACANT:{"type":"MARK_VACANT","tenantName":""}
-UPDATE_MOBILE:{"type":"UPDATE_MOBILE","tenantName":"","mobile":""}
-UPDATE_NAME:{"type":"UPDATE_NAME","tenantName":"","firstName":"","lastName":""}
-MONTHLY_RESET:{"type":"MONTHLY_RESET"}
-SEND_REMINDER:{"type":"SEND_REMINDER","tenantName":""}
-RESERVE_ROOM:{"type":"RESERVE_ROOM","roomName":""}
-UNRESERVE_ROOM:{"type":"UNRESERVE_ROOM","roomName":""}
-SET_ROOM_RENT:{"type":"SET_ROOM_RENT","roomName":"","amount":0}
-APPLY_LATE_FEES:{"type":"APPLY_LATE_FEES"}`;
+            const occ = rooms.filter(r => r.status === 'occupied' && r.tenant);
+            const vac = rooms.filter(r => r.status === 'vacant');
+            const now = new Date();
+            const mo = now.getMonth(), yr = now.getFullYear();
+            const pending = occ.reduce((s,r) => s + computeTotalDue(r), 0);
+            const paid    = payments.filter(p => p.status==='approved' && new Date(p.date).getMonth()===mo && new Date(p.date).getFullYear()===yr).reduce((s,p)=>s+(p.paidAmount||p.amount||0),0);
+            const rows    = occ.map(room => {
+                const t=room.tenant, b=t.monthlyBilling||{};
+                return `${t.name}|${room.name}|R:${b.rent||0}|E:${b.electricityBill||0}|Due:${computeTotalDue(room)}|Ph:${t.mobile||'?'}`;
+            }).join(';');
+            return `JARVIS=RentZen AI. ${now.toLocaleDateString('en-IN')}. Rooms:${rooms.length}(occ:${occ.length},vac:${vac.length}). Paid:${paid} Pending:${pending}. Vacant:${vac.map(r=>r.name).join(',')||'none'}.
+DATA:${rows||'none'}
+RULES:Reply 1-2 plain sentences. No markdown/JSON in reply. Append <ACTION>{json}</ACTION> only when change needed. ONE action max. Ask if info missing.
+ACTIONS(type field required):UPDATE_RENT|UPDATE_ELECTRICITY|BATCH_ELECTRICITY|BATCH_RENT|UPDATE_PENDING|MARK_PAID(+method,notes)|APPROVE_PAYMENT|REJECT_PAYMENT|ADD_ROOM|REMOVE_ROOM|ADD_TENANT(+firstName,lastName,mobile,rent,dob YYYY-MM-DD,moveInDate,roomName)|MARK_VACANT|UPDATE_MOBILE|UPDATE_NAME|MONTHLY_RESET|RESERVE_ROOM|UNRESERVE_ROOM|SET_ROOM_RENT|APPLY_LATE_FEES`;
         }
 
         async function sendAIMessage() {
@@ -8096,7 +8220,7 @@ APPLY_LATE_FEES:{"type":"APPLY_LATE_FEES"}`;
                     sendBtn.disabled = false; sendBtn.textContent = ' Send';
                     return;
                 }
-                const historySlice = _aiChatHistory.slice(-6);
+                const historySlice = _aiChatHistory.slice(-4); // keep last 4 msgs to save tokens
 
                 // Groq uses OpenAI-compatible messages format
                 const groqMessages = [
@@ -8562,8 +8686,13 @@ APPLY_LATE_FEES:{"type":"APPLY_LATE_FEES"}`;
             if (input) { input.value = question; sendAIMessage(); }
         }
 
-        // Initialize on load
-        window.onload = () => init().catch(console.error);
+        // Initialize immediately on DOMContentLoaded (not window.onload) so we don't
+        // wait for images/external resources — overlay disappears instantly.
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => init().catch(console.error));
+        } else {
+            init().catch(console.error);
+        }
 
         // Re-sync when tab becomes visible again (multi-device awareness)
         document.addEventListener('visibilitychange', () => {
