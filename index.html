@@ -3603,7 +3603,9 @@
             // Only count active tenants
             rooms.filter(r => r.status === 'occupied').forEach(room => {
                 if (room.tenant && room.tenant.monthlyBilling) {
-                    totalPending += computeTotalDue(room);
+                    // Use remaining balance (totalDue - paid), not gross totalDue
+                    const remaining = calculateRemainingBalance(room);
+                    if (remaining > 0) totalPending += remaining;
                 }
                 
                 // Only approved payments from current tenant (admin-recorded or approved submissions)
@@ -3650,17 +3652,7 @@
             }
         }
 
-        function getPaymentStatus(room) {
-            if (!room || !room.tenant) return { icon: '', label: 'N/A' };
-            const totalDue = computeTotalDue(room);
-            const totalPaid = calculateTotalPaid(room.tenant.id);
-            const remaining = totalDue - totalPaid;
-            
-            if (totalDue === 0) return { icon: '⚪', label: 'N/A' };
-            if (remaining <= 0) return { icon: '✓', label: 'Paid' };
-            if (remaining < totalDue) return { icon: '◐', label: 'Partially Paid' };
-            return { icon: '⚠', label: 'Pending' };
-        }
+        // getPaymentStatus is defined above (returns a plain string: 'Paid' | 'Partially Paid' | 'Pending' | 'N/A')
 
         function renderActiveRooms() {
             const grid = document.getElementById('activeRoomsGrid');
@@ -4023,13 +4015,14 @@
         }
 
         // Tenant dashboard — shows current month dues, payment history, and documents
-        function getPaymentStatusForTenant(billing) {
-            const due = billing.totalDue || 0;
+        function getPaymentStatusForTenant(room) {
+            const remaining = calculateRemainingBalance(room);
+            const billing = room?.tenant?.monthlyBilling || {};
             const today = new Date();
-            const isOverdue = today.getDate() > 5 && due > 0;
-            if (due === 0) return ' Paid';
+            const isOverdue = today.getDate() > 5 && remaining > 0;
+            if (remaining <= 0) return ' Paid';
             if (isOverdue) return ' Please pay before the 5th';
-            if (billing.pending > 0 && due < (billing.rent || 0)) return ' Partially Paid';
+            if (remaining < computeTotalDue(room)) return ' Partially Paid';
             return ' Unpaid';
         }
 
@@ -5125,7 +5118,7 @@
                 ...tenant,
                 roomName: room.name,
                 moveOutDate: new Date().toISOString().split('T')[0],
-                finalDues: tenant.monthlyBilling.totalDue,
+                finalDues: calculateRemainingBalance(room),
                 status: 'inactive',
                 archivedPayments: tenantPaymentHistory,  // store in inactive record
                 paymentHistory: tenant.paymentHistory || []  // preserve tenant's payment history
@@ -5231,14 +5224,14 @@
                 });
 
                 // Note: totalDue is computed live via computeTotalDue(room) - no need to mutate billing
-                const newDue = computeTotalDue(room);
+                const remaining = calculateRemainingBalance(room);
 
                 // Notify tenant
                 notifications.push({
                     id: `notif_${Date.now()}`,
                     roomId: room.id,
                     type: 'success',
-                    message: ` Admin recorded a payment of ${amount.toLocaleString()}. Remaining balance: ${newDue.toLocaleString()}`,
+                    message: ` Admin recorded a payment of ${amount.toLocaleString()}. Remaining balance: ${remaining > 0 ? remaining.toLocaleString() : '0 (Fully Paid)'}`,
                     date: new Date().toISOString(),
                     read: false
                 });
@@ -5246,7 +5239,7 @@
                 saveData();
                 closeModal();
                 renderAdminDashboard();
-                showNotification(`Payment ${amount.toLocaleString()} recorded for ${room.tenant.name}. Remaining: ${newDue.toLocaleString()}`, 'success');
+                showNotification(`Payment ${amount.toLocaleString()} recorded for ${room.tenant.name}. Remaining: ${remaining > 0 ? '₹' + remaining.toLocaleString() : 'Fully Paid'}`, 'success');
             };
 
             if (photoFile) {
@@ -5456,12 +5449,12 @@
                     date:       approval.date,
                     month:      new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
                 });
-                const newDue = computeTotalDue(room);
+                const remaining = calculateRemainingBalance(room);
                 notifications.push({
                     id:      `notif_${Date.now()}`,
                     roomId:  room.id,
                     type:    'success',
-                    message: ` Your payment of ${approval.amount.toLocaleString()} has been approved! Remaining balance: ${newDue.toLocaleString()}`,
+                    message: ` Your payment of ${approval.amount.toLocaleString()} has been approved! Remaining balance: ${remaining > 0 ? '₹' + remaining.toLocaleString() : '0 (Fully Paid)'}`,
                     date:    new Date().toISOString(),
                     read:    false
                 });
@@ -5680,8 +5673,9 @@
                     moveIn.getFullYear() === today.getFullYear() &&
                     moveIn.getMonth() === today.getMonth();
 
-                // 1. Snapshot unpaid balance from closing month (only for existing tenants)
-                const carryForward = tenantIsNewThisMonth ? 0 : computeTotalDue(room);
+                // 1. Snapshot UNPAID balance from closing month (only for existing tenants)
+                // Use calculateRemainingBalance, NOT computeTotalDue — carry forward only what's actually unpaid
+                const carryForward = tenantIsNewThisMonth ? 0 : Math.max(0, calculateRemainingBalance(room));
 
                 // 2. Update billing fields for the new month
                 billing.pending        = carryForward > 0 ? carryForward : 0;
@@ -6112,13 +6106,26 @@ Generated: ${formatDateDDMMYYYY(new Date().toISOString())}
             const occupied = rooms.filter(r => r.tenant).length;
             const vacant = totalRooms - occupied;
             const totalRevenue = payments.filter(p => p.status === 'approved').reduce((s, p) => s + (p.paidAmount || p.amount || 0), 0);
-            const totalPending = allT.reduce((s, t) => s + (t.monthlyBilling?.totalDue || t.finalDues || 0), 0);
+            // For active tenants, pending = remaining balance (totalDue - paid). For inactive, use archived finalDues.
+            const totalPending = allT.reduce((s, t) => {
+                if (t.status === 'Active') {
+                    const room = rooms.find(r => r.tenant?.id === t.id);
+                    return s + (room ? Math.max(0, calculateRemainingBalance(room)) : 0);
+                }
+                return s + (t.finalDues || 0);
+            }, 0);
             const genDate = formatDateDDMMYYYY(new Date().toISOString());
 
             const tenantRows = allT.map((t, i) => {
                 const tenantPayments = payments.filter(p => p.tenantId === t.id && p.status === 'approved');
                 const paid = tenantPayments.reduce((s, p) => s + (p.paidAmount || p.amount || 0), 0);
-                const pending = t.monthlyBilling?.totalDue || t.finalDues || 0;
+                let pending;
+                if (t.status === 'Active') {
+                    const room = rooms.find(r => r.tenant?.id === t.id);
+                    pending = room ? Math.max(0, calculateRemainingBalance(room)) : 0;
+                } else {
+                    pending = t.finalDues || 0;
+                }
                 const isActive = t.status === 'Active';
                 return `<tr style="background:${i%2===0?'#f4f7ff':'#fff'};">
                     <td style="padding:10px 14px;border-bottom:1px solid #edf0f7;font-weight:600;color:#0d1b3e;">${t.name}</td>
@@ -6792,12 +6799,13 @@ Please pay via Cash or PhonePe: 7999287071`;
                 }
             });
 
-            // Add current pending
+            // Add current pending (remaining balance only, not gross due)
             rooms.filter(r => r.status === 'occupied' && r.tenant).forEach(room => {
                 const billing = room.tenant.monthlyBilling || {};
                 const m = new Date().getMonth();
                 if (new Date().getFullYear() === year) {
-                    monthlyData[m].pending += computeTotalDue(room);
+                    const remaining = calculateRemainingBalance(room);
+                    monthlyData[m].pending += remaining > 0 ? remaining : 0;
                     monthlyData[m].elec += (billing.electricityBill || 0);
                 }
             });
@@ -7724,7 +7732,8 @@ tr:nth-child(even) td{background:#f8faff;}
 
             rooms.filter(r => r.status === 'occupied' && r.tenant).forEach(room => {
                 if (curYear === year) {
-                    monthlyData[curMonth].pending += computeTotalDue(room);
+                    const rem = calculateRemainingBalance(room);
+                    monthlyData[curMonth].pending += rem > 0 ? rem : 0;
                     if (!monthlyData[curMonth].elec)
                         monthlyData[curMonth].elec += (room.tenant.monthlyBilling?.electricityBill || 0);
                 }
@@ -7733,13 +7742,14 @@ tr:nth-child(even) td{background:#f8faff;}
             const totalCollected  = monthlyData.reduce((s, m) => s + m.collected, 0);
             const totalElec       = monthlyData.reduce((s, m) => s + m.elec, 0);
             const totalTxns       = monthlyData.reduce((s, m) => s + m.count, 0);
-            const totalPending    = rooms.filter(r=>r.status==='occupied'&&r.tenant).reduce((s,r)=>s+computeTotalDue(r),0);
+            const totalPending    = rooms.filter(r=>r.status==='occupied'&&r.tenant).reduce((s,r)=>{ const rem=calculateRemainingBalance(r); return s+(rem>0?rem:0); },0);
             const occupied        = rooms.filter(r => r.status === 'occupied').length;
             const vacant          = rooms.filter(r => r.status === 'vacant').length;
             const occupancyPct    = rooms.length > 0 ? Math.round((occupied / rooms.length) * 100) : 0;
             const monthsWithData  = monthlyData.filter(m=>m.collected>0).length || 1;
             const avgMonthly      = Math.round(totalCollected / monthsWithData);
             const bestMonth       = monthlyData.reduce((best,m,i) => m.collected > (monthlyData[best]?.collected||0) ? i : best, 0);
+            // collectionRate: collected / (collected + outstanding remaining), not gross due
             const collectionRate  = (totalCollected + totalPending) > 0
                 ? Math.round(totalCollected / (totalCollected + totalPending) * 100) : 0;
             const totalRent       = rooms.filter(r=>r.status==='occupied'&&r.tenant)
@@ -8039,7 +8049,7 @@ tr:nth-child(even) td{background:#f8faff;}
             const totalRev = monthlyRev.reduce((s,v)=>s+v,0);
             const maxRev = Math.max(...monthlyRev,1);
             const occupied = rooms.filter(r=>r.tenant);
-            const totalPending = occupied.reduce((s,r)=>s+computeTotalDue(r),0);
+            const totalPending = occupied.reduce((s,r) => s + Math.max(0, calculateRemainingBalance(r)), 0);
             const genDate = formatDateDDMMYYYY(new Date().toISOString());
 
             const chartRows = monthlyRev.map((v,i) => {
@@ -8058,7 +8068,7 @@ tr:nth-child(even) td{background:#f8faff;}
 
             const tenantRows = occupied.map((r,i) => {
                 const t = r.tenant;
-                const due = computeTotalDue(r);
+                const due = Math.max(0, calculateRemainingBalance(r));
                 const paid = payments.filter(p=>p.tenantId===t.id&&p.status==='approved').reduce((s,p)=>s+(p.paidAmount||p.amount||0),0);
                 return `<tr style="background:${i%2===0?'#f4f7ff':'#fff'};">
                     <td style="padding:9px 13px;border-bottom:1px solid #edf0f7;font-weight:600;">${t.name}</td>
@@ -8159,11 +8169,11 @@ tr:nth-child(even) td{background:#f8faff;}
             const vac = rooms.filter(r => r.status === 'vacant');
             const now = new Date();
             const mo = now.getMonth(), yr = now.getFullYear();
-            const pending = occ.reduce((s,r) => s + computeTotalDue(r), 0);
+            const pending = occ.reduce((s,r) => s + Math.max(0, calculateRemainingBalance(r)), 0);
             const paid    = payments.filter(p => p.status==='approved' && new Date(p.date).getMonth()===mo && new Date(p.date).getFullYear()===yr).reduce((s,p)=>s+(p.paidAmount||p.amount||0),0);
             const rows    = occ.map(room => {
                 const t=room.tenant, b=t.monthlyBilling||{};
-                return `${t.name}|${room.name}|R:${b.rent||0}|E:${b.electricityBill||0}|Due:${computeTotalDue(room)}|Ph:${t.mobile||'?'}`;
+                return `${t.name}|${room.name}|R:${b.rent||0}|E:${b.electricityBill||0}|Remaining:${Math.max(0,calculateRemainingBalance(room))}|Ph:${t.mobile||'?'}`;
             }).join(';');
             return `JARVIS=RentZen AI. ${now.toLocaleDateString('en-IN')}. Rooms:${rooms.length}(occ:${occ.length},vac:${vac.length}). Paid:${paid} Pending:${pending}. Vacant:${vac.map(r=>r.name).join(',')||'none'}.
 DATA:${rows||'none'}
