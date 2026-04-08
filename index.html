@@ -2124,13 +2124,13 @@
                 <div class="form-group">
                     <label>Password (DOB: DDMMYY)</label>
                     <div style="position: relative;">
-                        <input type="password" id="tenantPassword" required placeholder="e.g., 240908" style="padding-right: 45px;">
+                        <input type="password" id="tenantPassword" required placeholder="Your DOB as DDMMYY" style="padding-right: 45px;">
                         <button type="button" onclick="togglePassword('tenantPassword', 'tenantEye')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color:var(--text-secondary); font-size: 18px;">
                             <span id="tenantEye"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>
                         </button>
                     </div>
                     <small style="color:var(--text-muted); margin-top: 8px; display: block; font-size: 0.82em;">
-                        DOB 24 Sept 2008 → password <strong style="color:var(--accent-blue);">240908</strong>
+                        Your password is your Date of Birth in <strong style="color:var(--accent-blue);">DDMMYY</strong> format
                     </small>
                 </div>
                 <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:0.95em;margin-top:4px;justify-content:center;">Sign In →</button>
@@ -2977,6 +2977,30 @@
         // ============================================================
         //  AVAILABILITY CHECK
         // ============================================================
+        // ── PASSWORD MIGRATION: hash any legacy plaintext tenant passwords on startup ──
+        async function migratePasswordsToHash() {
+            let changed = false;
+            for (const entry of rooms) {
+                const t = entry.tenant;
+                if (t && t.password && !t.passwordHash) {
+                    t.passwordHash = await _hash(t.password);
+                    delete t.password;
+                    changed = true;
+                }
+            }
+            for (const t of inactiveTenants) {
+                if (t && t.password && !t.passwordHash) {
+                    t.passwordHash = await _hash(t.password);
+                    delete t.password;
+                    changed = true;
+                }
+            }
+            if (changed) {
+                saveData();
+                console.info('[RentZen] Tenant passwords migrated to hashed form.');
+            }
+        }
+
         async function checkDbAvailability() {
             // Supabase is the only backend — check it with a ping write
             if (window._sbReady && window.sbGet) {
@@ -3185,6 +3209,9 @@
             // STEP 2: Hide overlay immediately so login shows at once
             overlay.classList.add('hidden');
 
+            // Migrate any plaintext passwords left from old versions (runs async, non-blocking)
+            migratePasswordsToHash();
+
             // STEP 3: Sync with Supabase silently in the background
             _backgroundCloudSync();
         }
@@ -3220,6 +3247,7 @@
                     setSyncState('connected', 'Cloud Synced');
                     persistToLocalStorage();
                     _rebuildPaymentsIndex();
+                    await migratePasswordsToHash();  // upgrade plaintext → hashed passwords
 
                     // Refresh dashboard silently if already logged in
                     if (currentUser && currentUser.type === 'admin')       renderAdminDashboard();
@@ -3364,22 +3392,74 @@
             }
         }
 
+        // ── RATE LIMITER ─────────────────────────────────────────────────────
+        const _loginAttempts = {};  // { key: { count, lockedUntil } }
+        function _checkRateLimit(key) {
+            const now = Date.now();
+            if (!_loginAttempts[key]) _loginAttempts[key] = { count: 0, lockedUntil: 0 };
+            const rec = _loginAttempts[key];
+            if (rec.lockedUntil > now) {
+                const secs = Math.ceil((rec.lockedUntil - now) / 1000);
+                return { blocked: true, secs };
+            }
+            return { blocked: false };
+        }
+        function _recordFailedAttempt(key) {
+            const rec = _loginAttempts[key];
+            rec.count++;
+            if (rec.count >= 5) {
+                rec.lockedUntil = Date.now() + 60_000;  // 60-second lockout
+                rec.count = 0;
+            }
+        }
+        function _clearAttempts(key) { delete _loginAttempts[key]; }
+
+        // ── HASH HELPER ──────────────────────────────────────────────────────
+        const _hash = async s => Array.from(
+            new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))
+        ).map(b => b.toString(16).padStart(2,'0')).join('');
+
         async function handleAdminLogin(event) {
             event.preventDefault();
-            const username = document.getElementById('adminUsername').value;
+            const username = document.getElementById('adminUsername').value.trim();
             const password = document.getElementById('adminPassword').value;
+            const rateLimitKey = 'admin';
 
-            const _hash = async s => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))).map(b=>b.toString(16).padStart(2,'0')).join('');
+            // Rate limit check
+            const rl = _checkRateLimit(rateLimitKey);
+            if (rl.blocked) {
+                document.getElementById('adminError').textContent = `Too many attempts. Try again in ${rl.secs}s.`;
+                document.getElementById('adminError').style.display = 'block';
+                return;
+            }
+
+            // Hash both inputs
             const [uHash, pHash] = await Promise.all([_hash(username), _hash(password)]);
-            if (uHash === '06eeab9aebfbb2e228b907600f1ef477a2b7435bc172b0d8268739826fa83ee1' && pHash === '0aaca6985ed6298c22ead189ae80f03358c5209ad76a4b848d90be08284df5c2') {
+
+            // Fetch stored hashes from Supabase kv_store
+            let storedUHash = null, storedPHash = null;
+            if (supabaseAvailable && window.sbGet) {
+                try {
+                    storedUHash = await window.sbGet('admin_username_hash');
+                    storedPHash = await window.sbGet('admin_password_hash');
+                } catch(e) { /* fall through to error */ }
+            }
+
+            // First-run: no credentials stored yet → set them now
+            if (!storedUHash && !storedPHash && supabaseAvailable && window.sbSet) {
+                await window.sbSet('admin_username_hash', uHash);
+                await window.sbSet('admin_password_hash', pHash);
+                storedUHash = uHash;
+                storedPHash = pHash;
+                showNotification('Admin credentials saved securely to cloud ✓', 'success');
+            }
+
+            if (storedUHash && storedPHash && uHash === storedUHash && pHash === storedPHash) {
+                _clearAttempts(rateLimitKey);
                 currentUser = { type: 'admin', username };
-                // Persist session per-tab so multiple tabs/devices can be logged in
                 sessionStorage.setItem('galaxy:session', JSON.stringify(currentUser));
-                // Record admin login time for 30-min auto-logout
                 sessionStorage.setItem('galaxy:adminLoginTime', Date.now().toString());
                 startAdminSessionTimer();
-                
-                // Record login history
                 notifications.push({
                     id: `login_${Date.now()}`,
                     type: 'login',
@@ -3387,24 +3467,40 @@
                     loginType: 'admin',
                     timestamp: new Date().toISOString()
                 });
-                
                 showDashboard('admin');
                 showNotification('Welcome Admin!', 'success');
                 if (dbAvailable) { sendPresenceHeartbeat(); setTimeout(updateOnlinePanel, 500); }
             } else {
+                _recordFailedAttempt(rateLimitKey);
+                const remaining = 5 - (_loginAttempts[rateLimitKey]?.count || 0);
+                document.getElementById('adminError').textContent =
+                    storedUHash
+                        ? `Invalid credentials. ${remaining > 0 ? remaining + ' attempt(s) left.' : 'Account locked 60s.'}`
+                        : 'Cloud not available — cannot verify credentials.';
                 document.getElementById('adminError').style.display = 'block';
                 showNotification('Invalid credentials', 'error');
             }
         }
 
-        function handleTenantLogin(event) {
+        async function handleTenantLogin(event) {
             event.preventDefault();
             const roomName = document.getElementById('tenantUsername').value;
             const password = document.getElementById('tenantPassword').value;
+            const rateLimitKey = `tenant:${roomName}`;
+
+            // Rate limit check
+            const rl = _checkRateLimit(rateLimitKey);
+            if (rl.blocked) {
+                document.getElementById('tenantError').textContent = `Too many attempts. Try again in ${rl.secs}s.`;
+                document.getElementById('tenantError').style.display = 'block';
+                return;
+            }
 
             const room = rooms.find(r => r.name === roomName && r.status === 'occupied');
-            
-            if (room && room.tenant && room.tenant.password === password) {
+            const pHash = await _hash(password);
+
+            if (room && room.tenant && room.tenant.passwordHash === pHash) {
+                _clearAttempts(rateLimitKey);
                 currentUser = { type: 'tenant', room: room, roomId: room.id };
                 // Save session per-tab so multiple tenants can be logged in concurrently
                 sessionStorage.setItem('galaxy:session', JSON.stringify({ type: 'tenant', roomId: room.id }));
@@ -3426,6 +3522,10 @@
                 if (dbAvailable) sendPresenceHeartbeat();
                 if (dbAvailable) setTimeout(updateOnlinePanel, 500);
             } else {
+                _recordFailedAttempt(rateLimitKey);
+                const remaining = 5 - (_loginAttempts[rateLimitKey]?.count || 0);
+                document.getElementById('tenantError').textContent =
+                    `Invalid room or password. ${remaining > 0 ? remaining + ' attempt(s) left.' : 'Locked 60s.'}`;
                 document.getElementById('tenantError').style.display = 'block';
                 showNotification('Invalid credentials', 'error');
             }
@@ -4545,13 +4645,13 @@
                 showNotification('Please fill in all required fields', 'error'); return;
             }
 
-            // Recalculate password from DOB
-            let password = room.tenant.password;
+            // Recalculate password from DOB and hash it
             if (dobFull) {
                 const dobDate = new Date(dobFull);
-                password = String(dobDate.getDate()).padStart(2,'0') +
+                const _rawPass = String(dobDate.getDate()).padStart(2,'0') +
                            String(dobDate.getMonth()+1).padStart(2,'0') +
                            String(dobDate.getFullYear()).slice(-2);
+                _hash(_rawPass).then(h => { tenant.passwordHash = h; delete tenant.password; saveData(); });
             }
 
             const tenant = room.tenant;
@@ -4562,7 +4662,6 @@
             tenant.mobile2     = mobile2;
             tenant.mobile2Label = mobile2Label;
             tenant.dobFull     = dobFull;
-            tenant.password    = password;
             tenant.moveInDate  = moveInDate;
             room.rent          = rent;
             if (tenant.monthlyBilling) {
@@ -4761,11 +4860,13 @@
             const hasAdvance = document.getElementById('hasAdvance').checked;
             const enableDocUpload = document.getElementById('enableDocUpload').checked;
 
-            // Calculate DOB password (DDMMYY)
+            // Calculate DOB password (DDMMYY) and hash it
             const dobDate = new Date(dobFull);
-            const password = String(dobDate.getDate()).padStart(2, '0') + 
+            const _rawPass = String(dobDate.getDate()).padStart(2, '0') + 
                            String(dobDate.getMonth() + 1).padStart(2, '0') + 
                            String(dobDate.getFullYear()).slice(-2);
+            const password = _rawPass; // kept for finalizeTenantSave signature compat
+            const _passHashPromise = _hash(_rawPass);
 
             const tenant = room.tenant || {
                 id: `tenant_${Date.now()}`,
@@ -4779,9 +4880,10 @@
             tenant.mobile2 = mobile2;
             tenant.mobile2Label = mobile2Label;
             tenant.dobFull = dobFull;
-            tenant.password = password;
             tenant.moveInDate = moveInDate;
             tenant.docUploadEnabled = enableDocUpload;
+            // Hash password before storing
+            _passHashPromise.then(h => { tenant.passwordHash = h; delete tenant.password; saveData(); });
             // Always update monthlyBilling (preserve existing electricity/pending, update rent)
             if (tenant.monthlyBilling) {
                 tenant.monthlyBilling.rent = rent;
@@ -4876,7 +4978,7 @@
             }
         }
 
-        function finalizeTenantSave(room, tenant, rent, password) {
+        async function finalizeTenantSave(room, tenant, rent, password) {
             const isNewTenant = !room.tenant || room.tenant.id !== tenant.id;
 
             room.tenant = tenant;
@@ -4897,10 +4999,16 @@
                 room.tenant.monthlyBilling.totalDue = rent;
             }
 
+            // Store passwordHash, never plaintext
+            if (password && !tenant.passwordHash) {
+                tenant.passwordHash = await _hash(password);
+                delete tenant.password;
+            }
+
             saveData();
             closeModal();
             renderAdminDashboard();
-            showNotification(`Tenant saved! Username: ${room.name}, Password: ${password}`, 'success');
+            showNotification(`Tenant saved! Login: ${room.name} / Password: DOB (DDMMYY)`, 'success');
         }
 
         function getNextMonth(dateStr) {
@@ -7097,7 +7205,8 @@ tr:nth-child(even) td{background:#f8faff;}
                             <code style="color:var(--accent-amber);display:block;margin:6px 0;padding:8px;background:rgba(0,0,0,0.3);border-radius:6px;font-size:0.9em;">
 CREATE TABLE IF NOT EXISTS kv_store (key TEXT PRIMARY KEY, value JSONB, updated_at TIMESTAMPTZ DEFAULT now());<br>
 ALTER TABLE kv_store ENABLE ROW LEVEL SECURITY;<br>
-CREATE POLICY "Public" ON kv_store FOR ALL USING (true) WITH CHECK (true);
+-- Allow only authenticated reads (anon key blocked from direct table access):<br>
+CREATE POLICY "service_only" ON kv_store FOR ALL TO service_role USING (true) WITH CHECK (true);
                             </code>
                             3. Settings  API  copy <strong>Project URL</strong> &amp; <strong>anon public key</strong> into this file<br>
                             <em style="color:var(--accent-rose);">⚠️ Supabase not connected — data cannot be saved until you complete setup above.</em>
