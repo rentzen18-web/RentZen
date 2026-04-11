@@ -2158,6 +2158,7 @@
                     <button class="btn btn-warning" onclick="exportData()">Export</button>
                     <button class="btn btn-success" onclick="backupDataNow()" title="Backup all data as JSON">Backup</button>
                     <button class="btn btn-primary" onclick="manualSync()" title="Force sync with cloud">Sync</button>
+                    <button class="btn" onclick="openChangePasswordModal()" title="Change admin password" style="background:var(--bg-overlay);border-color:var(--border-default);color:var(--text-secondary);">🔑 Password</button>
                     <button class="btn btn-danger" onclick="logout()">Logout</button>
                 </div>
             </header>
@@ -2508,13 +2509,11 @@
            3. Paste them into SUPABASE_URL and SUPABASE_ANON_KEY below
           -->
     <script>
-        // -- SUPABASE CREDENTIALS (optional - app works fully without these) --
+        // -- SUPABASE CREDENTIALS --
         const SUPABASE_URL      = "https://jvjjymuezpchchgfsvav.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_H1OC1fRt1_3sdapwb38I5w_fpDRczF1";
 
         // -- Connection state -------------------------------------------------
-        // _sbEnabled starts true if credentials look real; flips to false permanently
-        // the moment the FIRST network call fails so we stop retrying completely.
         let _sbEnabled = (SUPABASE_URL !== "YOUR_SUPABASE_URL" && SUPABASE_URL.startsWith("https://"));
         const _sbConfigured = _sbEnabled;
 
@@ -2523,10 +2522,9 @@
             _sbEnabled = false;
             window._sbReady = false;
             window.supabaseAvailable = false;
-            // Silent - no console noise
         }
 
-        // -- REST helper - silently returns null/false on any failure ---------
+        // -- REST helper ------------------------------------------------------
         async function _sbReq(method, path, body) {
             if (!_sbEnabled) return method === 'GET' ? [] : null;
             try {
@@ -2543,18 +2541,12 @@
                     body: body ? JSON.stringify(body) : undefined
                 });
                 if (!res.ok) {
-                    // Only fully disable on auth errors (401/403) - not on table/data errors
-                    if (res.status === 401 || res.status === 403) {
-                        _sbDisable('HTTP ' + res.status);
-                    }
+                    if (res.status === 401 || res.status === 403) _sbDisable('HTTP ' + res.status);
                     return method === 'GET' ? [] : null;
                 }
                 return res.json();
             } catch(e) {
-                // Only disable on network failure (no internet), not on API errors
-                if (e instanceof TypeError && e.message.includes('fetch')) {
-                    _sbDisable('fetch failed');
-                }
+                if (e instanceof TypeError && e.message.includes('fetch')) _sbDisable('fetch failed');
                 return method === 'GET' ? [] : null;
             }
         }
@@ -3502,6 +3494,20 @@
             if (room && room.tenant && room.tenant.passwordHash === pHash) {
                 _clearAttempts(rateLimitKey);
                 currentUser = { type: 'tenant', room: room, roomId: room.id };
+
+                // ── TENANT DATA ISOLATION ─────────────────────────────────
+                // Strip all other rooms from memory so DevTools can't expose
+                // other tenants' data. Keep only the logged-in tenant's room,
+                // and remove password hash even from that room.
+                const safeRoom = JSON.parse(JSON.stringify(room));
+                if (safeRoom.tenant) {
+                    delete safeRoom.tenant.passwordHash;
+                    delete safeRoom.tenant.password;
+                }
+                rooms = [safeRoom];
+                inactiveTenants = [];
+                currentUser.room = safeRoom;
+                // ────────────────────────────────────────────────────────────
                 // Save session per-tab so multiple tenants can be logged in concurrently
                 sessionStorage.setItem('galaxy:session', JSON.stringify({ type: 'tenant', roomId: room.id }));
                 
@@ -3521,6 +3527,7 @@
                 showNotification(`Welcome ${room.tenant.name}! `, 'success');
                 if (dbAvailable) sendPresenceHeartbeat();
                 if (dbAvailable) setTimeout(updateOnlinePanel, 500);
+                _startTenantIdleWatcher();
             } else {
                 _recordFailedAttempt(rateLimitKey);
                 const remaining = 5 - (_loginAttempts[rateLimitKey]?.count || 0);
@@ -3546,6 +3553,7 @@
         function logout() {
             // Record logout time            }
             stopAdminSessionTimer();
+            _stopTenantIdleWatcher();
             currentUser = null;
             sessionStorage.removeItem('galaxy:session');
             sessionStorage.removeItem('galaxy:adminLoginTime');
@@ -3678,6 +3686,98 @@
                 '</div>'
             ].join('');
             document.body.appendChild(overlay);
+        }
+
+        // ============================================================
+        // CHANGE ADMIN PASSWORD
+        // ============================================================
+        function openChangePasswordModal() {
+            const existing = document.getElementById('changePasswordModal');
+            if (existing) existing.remove();
+            const modal = document.createElement('div');
+            modal.id = 'changePasswordModal';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
+            modal.innerHTML = `
+                <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:18px;padding:36px 40px;max-width:420px;width:90%;font-family:'Geist',sans-serif;box-shadow:var(--shadow-lg);">
+                    <h3 style="color:var(--text-primary);margin-bottom:6px;font-size:1.15em;">🔑 Change Admin Password</h3>
+                    <p style="color:var(--text-muted);font-size:0.82em;margin-bottom:24px;">New credentials will be saved securely to Supabase.</p>
+                    <div class="form-group">
+                        <label>New Username</label>
+                        <input type="text" id="cpNewUser" placeholder="Enter new username" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" id="cpNewPass" placeholder="Min 8 characters">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm Password</label>
+                        <input type="password" id="cpConfPass" placeholder="Repeat new password">
+                    </div>
+                    <div id="cpError" style="color:var(--accent-rose);font-size:0.82em;margin-bottom:12px;display:none;"></div>
+                    <div style="display:flex;gap:10px;justify-content:flex-end;">
+                        <button onclick="document.getElementById('changePasswordModal').remove()" class="btn" style="background:transparent;border-color:var(--border-default);color:var(--text-secondary);">Cancel</button>
+                        <button onclick="saveNewAdminPassword()" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            document.getElementById('cpNewUser').focus();
+        }
+
+        async function saveNewAdminPassword() {
+            const newUser = document.getElementById('cpNewUser').value.trim();
+            const newPass = document.getElementById('cpNewPass').value;
+            const confPass = document.getElementById('cpConfPass').value;
+            const errEl = document.getElementById('cpError');
+            errEl.style.display = 'none';
+
+            if (!newUser || !newPass) { errEl.textContent = 'All fields required.'; errEl.style.display = 'block'; return; }
+            if (newPass.length < 8)   { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
+            if (newPass !== confPass)  { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
+            if (!supabaseAvailable)    { errEl.textContent = 'Cloud not available — cannot save credentials.'; errEl.style.display = 'block'; return; }
+
+            const [uHash, pHash] = await Promise.all([_hash(newUser), _hash(newPass)]);
+            await window.sbSet('admin_username_hash', uHash);
+            await window.sbSet('admin_password_hash', pHash);
+            document.getElementById('changePasswordModal').remove();
+            showNotification('✓ Admin password updated successfully!', 'success');
+        }
+
+        // ============================================================
+        // TENANT IDLE TIMEOUT — 20 minutes
+        // ============================================================
+        var _tenantIdleTimer = null;
+        var TENANT_IDLE_MS   = 20 * 60 * 1000;  // 20 minutes
+
+        function _resetTenantIdleTimer() {
+            if (!currentUser || currentUser.type !== 'tenant') return;
+            clearTimeout(_tenantIdleTimer);
+            _tenantIdleTimer = setTimeout(function() {
+                var overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(8,8,14,0.97);display:flex;align-items:center;justify-content:center;';
+                overlay.innerHTML = [
+                    '<div style="background:#16161f;border:1px solid rgba(244,63,94,0.4);border-radius:18px;padding:40px 48px;text-align:center;max-width:400px;font-family:\'Geist\',sans-serif;">',
+                    '  <div style="font-size:3em;margin-bottom:16px;">🔒</div>',
+                    '  <div style="color:#f0f0f5;font-size:1.15em;font-weight:700;margin-bottom:8px;">Session Expired</div>',
+                    '  <div style="color:#8b8ba0;font-size:0.88em;margin-bottom:24px;">You were logged out due to 20 minutes of inactivity.</div>',
+                    '  <button onclick="this.closest(\'div[style]\').remove();logout();" style="padding:9px 28px;background:var(--accent-purple);color:#fff;border:none;border-radius:9px;font-size:0.9em;font-weight:600;cursor:pointer;font-family:\'Geist\',sans-serif;">OK, Login Again</button>',
+                    '</div>'
+                ].join('');
+                document.body.appendChild(overlay);
+            }, TENANT_IDLE_MS);
+        }
+
+        function _startTenantIdleWatcher() {
+            ['mousemove','keydown','click','touchstart','scroll'].forEach(function(ev) {
+                document.addEventListener(ev, _resetTenantIdleTimer, { passive: true });
+            });
+            _resetTenantIdleTimer();
+        }
+
+        function _stopTenantIdleWatcher() {
+            clearTimeout(_tenantIdleTimer);
+            ['mousemove','keydown','click','touchstart','scroll'].forEach(function(ev) {
+                document.removeEventListener(ev, _resetTenantIdleTimer);
+            });
         }
 
         // ============================================================
